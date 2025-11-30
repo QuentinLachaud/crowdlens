@@ -13,11 +13,12 @@
 'use client';
 
 import { useMemo, useState, useRef, ChangeEvent } from 'react';
-import { ArrowLeft, Calendar, MapPin, Trash2, ZoomIn, ZoomOut, CheckSquare, Square, X, Plus } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Trash2, ZoomIn, ZoomOut, CheckSquare, Square, X, Plus, UserSearch } from 'lucide-react';
 import { usePhotos } from '@/context/PhotoContext';
 import { getDateRange, groupPhotosByTime } from '@/utils/helpers';
 import PhotoModal from './PhotoModal';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
+import FindYourselfModal from './FindYourselfModal';
 import { Photo } from '@/types';
 
 export default function EventDetailView() {
@@ -43,6 +44,9 @@ export default function EventDetailView() {
   // Delete confirmation modal state
   const [showDeleteEventModal, setShowDeleteEventModal] = useState(false);
   const [showDeletePhotosModal, setShowDeletePhotosModal] = useState(false);
+  
+  // Find yourself modal state
+  const [showFindYourselfModal, setShowFindYourselfModal] = useState(false);
   
   const event = useMemo(() => {
     return events.find(e => e.id === selectedEventId);
@@ -209,6 +213,23 @@ export default function EventDetailView() {
             </button>
           )}
           
+          {/* Find Yourself button */}
+          <button
+            onClick={() => setShowFindYourselfModal(true)}
+            className="
+              flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
+              bg-gradient-to-r from-violet-500 to-purple-600
+              text-white
+              hover:from-violet-600 hover:to-purple-700
+              shadow-lg shadow-violet-500/25
+              hover:shadow-xl hover:shadow-violet-500/35
+              transition-all duration-200
+            "
+          >
+            <UserSearch className="w-4 h-4" />
+            <span>Find yourself</span>
+          </button>
+          
           {/* Zoom Slider */}
           <div className="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-xl px-4 py-2 shadow-sm border border-gray-200 dark:border-gray-700">
             <ZoomOut className="w-4 h-4 text-gray-400" />
@@ -336,6 +357,16 @@ export default function EventDetailView() {
         title={`Delete ${selectedPhotoIds.size} photo${selectedPhotoIds.size !== 1 ? 's' : ''}?`}
         message={`Are you sure you want to delete ${selectedPhotoIds.size} selected photo${selectedPhotoIds.size !== 1 ? 's' : ''}? This cannot be undone.`}
       />
+      
+      {/* Find Yourself Modal */}
+      {event && (
+        <FindYourselfModal
+          isOpen={showFindYourselfModal}
+          onClose={() => setShowFindYourselfModal(false)}
+          eventId={event.id}
+          eventName={event.name}
+        />
+      )}
       
       {/* Hidden file input for upload */}
       <input

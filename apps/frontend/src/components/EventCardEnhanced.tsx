@@ -19,11 +19,13 @@ import {
   MapPin, 
   ImageIcon, 
   Plus, 
-  Pencil 
+  Pencil,
+  UserSearch 
 } from 'lucide-react';
 import { Event, Photo, EVENT_TYPE_LABELS } from '@/types';
 import { formatDate } from '@/utils/helpers';
 import { usePhotos } from '@/context/PhotoContext';
+import FindYourselfModal from './FindYourselfModal';
 
 interface EventCardEnhancedProps {
   event: Event;
@@ -58,6 +60,7 @@ export default function EventCardEnhanced({
   
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [showPhotoCountHighlight, setShowPhotoCountHighlight] = useState(false);
+  const [showFindYourselfModal, setShowFindYourselfModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const hasLocation = event.locationLat !== undefined && event.locationLng !== undefined;
@@ -109,6 +112,12 @@ export default function EventCardEnhanced({
   const handleAddPhotosClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     fileInputRef.current?.click();
+  };
+  
+  // Handle find yourself click
+  const handleFindYourselfClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowFindYourselfModal(true);
   };
   
   // Handle file selection - directly upload to this event
@@ -283,6 +292,23 @@ export default function EventCardEnhanced({
         
         {/* Action buttons */}
         <div className="flex items-center justify-end gap-2">
+          {/* Find yourself button */}
+          <button
+            onClick={handleFindYourselfClick}
+            className="
+              p-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600
+              text-white
+              hover:from-violet-600 hover:to-purple-700
+              shadow-lg shadow-violet-500/25
+              hover:shadow-xl hover:shadow-violet-500/35
+              transition-all duration-200
+              hover:scale-110 active:scale-95
+            "
+            title="Find yourself in photos"
+          >
+            <UserSearch className="w-4 h-4" />
+          </button>
+          
           {/* Edit button */}
           <button
             onClick={handleEditClick}
@@ -318,6 +344,14 @@ export default function EventCardEnhanced({
           </button>
         </div>
       </div>
+      
+      {/* Find Yourself Modal */}
+      <FindYourselfModal
+        isOpen={showFindYourselfModal}
+        onClose={() => setShowFindYourselfModal(false)}
+        eventId={event.id}
+        eventName={event.name}
+      />
     </div>
   );
 }
