@@ -48,11 +48,9 @@ export async function handleFaceSearch(
   const { eventId } = ctx.params;
   const { storage, visionProvider } = ctx.env;
   
-  // Verify event exists
+  // Check if event exists (if not, we'll run in demo mode)
   const event = await storage.getEvent(eventId);
-  if (!event) {
-    return errorResponse('Event not found', 404, 'EVENT_NOT_FOUND');
-  }
+  const isDemoMode = !event;
   
   // Parse request body
   let body: FaceSearchRequest | null = null;
@@ -117,6 +115,36 @@ export async function handleFaceSearch(
   const referenceEmbedding = facesResult.data[0].embedding;
   const threshold = body.threshold ?? 0.6;
   
+  // In demo mode, return mock results
+  if (isDemoMode) {
+    return jsonResponse({
+      success: true,
+      eventId,
+      searchType: 'face',
+      threshold,
+      demoMode: true,
+      message: 'Demo mode: Backend has no photos for this event yet. Upload photos to the backend to enable real face matching.',
+      clusters: [
+        {
+          clusterId: 'demo-cluster-1',
+          displayName: 'Demo Person',
+          photoCount: 5,
+          faceCount: 7,
+          similarity: 0.92,
+          isClaimed: false,
+          representativeThumbnailUrl: null,
+          matchingPhotos: [
+            { photoId: 'demo-1', thumbnailUrl: '/demo/photo1.jpg', confidence: 0.95 },
+            { photoId: 'demo-2', thumbnailUrl: '/demo/photo2.jpg', confidence: 0.89 },
+            { photoId: 'demo-3', thumbnailUrl: '/demo/photo3.jpg', confidence: 0.85 },
+          ],
+          totalPhotoCount: 5,
+        },
+      ],
+      total: 1,
+    });
+  }
+  
   // Search for matching clusters
   const clusters = await storage.searchByFaceEmbedding(
     eventId,
@@ -146,11 +174,9 @@ export async function handleBibSearch(
   const { eventId } = ctx.params;
   const { storage } = ctx.env;
   
-  // Verify event exists
+  // Check if event exists (if not, run in demo mode)
   const event = await storage.getEvent(eventId);
-  if (!event) {
-    return errorResponse('Event not found', 404, 'EVENT_NOT_FOUND');
-  }
+  const isDemoMode = !event;
   
   // Get bib number from query params
   const url = new URL(ctx.request.url);
@@ -158,6 +184,35 @@ export async function handleBibSearch(
   
   if (!bibNumber || bibNumber.trim() === '') {
     return errorResponse('Bib number is required', 400, 'MISSING_BIB');
+  }
+  
+  // In demo mode, return mock results
+  if (isDemoMode) {
+    return jsonResponse({
+      success: true,
+      eventId,
+      searchType: 'bib',
+      query: bibNumber.trim(),
+      demoMode: true,
+      message: 'Demo mode: Backend has no photos for this event yet.',
+      clusters: [
+        {
+          clusterId: 'demo-bib-cluster',
+          displayName: `Runner #${bibNumber.trim()}`,
+          photoCount: 3,
+          faceCount: 3,
+          similarity: 1.0,
+          isClaimed: false,
+          representativeThumbnailUrl: null,
+          matchingPhotos: [
+            { photoId: 'demo-bib-1', thumbnailUrl: '/demo/bib1.jpg', confidence: 0.98 },
+            { photoId: 'demo-bib-2', thumbnailUrl: '/demo/bib2.jpg', confidence: 0.95 },
+          ],
+          totalPhotoCount: 3,
+        },
+      ],
+      total: 1,
+    });
   }
   
   // Search for matching clusters
@@ -185,11 +240,9 @@ export async function handleClothingSearch(
   const { eventId } = ctx.params;
   const { storage } = ctx.env;
   
-  // Verify event exists
+  // Check if event exists (if not, run in demo mode)
   const event = await storage.getEvent(eventId);
-  if (!event) {
-    return errorResponse('Event not found', 404, 'EVENT_NOT_FOUND');
-  }
+  const isDemoMode = !event;
   
   // Get filters from query params
   const url = new URL(ctx.request.url);
@@ -212,6 +265,36 @@ export async function handleClothingSearch(
       400,
       'MISSING_FILTERS'
     );
+  }
+  
+  // In demo mode, return mock results
+  if (isDemoMode) {
+    const colorLabel = primaryColor || descriptor || 'matching';
+    return jsonResponse({
+      success: true,
+      eventId,
+      searchType: 'clothing',
+      filters,
+      demoMode: true,
+      message: 'Demo mode: Backend has no photos for this event yet.',
+      clusters: [
+        {
+          clusterId: 'demo-clothing-cluster',
+          displayName: `Person in ${colorLabel}`,
+          photoCount: 4,
+          faceCount: 4,
+          similarity: 0.85,
+          isClaimed: false,
+          representativeThumbnailUrl: null,
+          matchingPhotos: [
+            { photoId: 'demo-cloth-1', thumbnailUrl: '/demo/cloth1.jpg', confidence: 0.90 },
+            { photoId: 'demo-cloth-2', thumbnailUrl: '/demo/cloth2.jpg', confidence: 0.82 },
+          ],
+          totalPhotoCount: 4,
+        },
+      ],
+      total: 1,
+    });
   }
   
   // Search for matching clusters
@@ -238,10 +321,19 @@ export async function handleListClusters(
   const { eventId } = ctx.params;
   const { storage } = ctx.env;
   
-  // Verify event exists
+  // Check if event exists (if not, run in demo mode)
   const event = await storage.getEvent(eventId);
+  
   if (!event) {
-    return errorResponse('Event not found', 404, 'EVENT_NOT_FOUND');
+    // Demo mode - return empty clusters with helpful message
+    return jsonResponse({
+      success: true,
+      eventId,
+      demoMode: true,
+      message: 'Demo mode: No clusters found. Upload photos to the backend to enable clustering.',
+      clusters: [],
+      total: 0,
+    });
   }
   
   const clusters = await storage.getClustersByEvent(eventId);

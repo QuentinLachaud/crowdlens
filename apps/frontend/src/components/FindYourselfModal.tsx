@@ -11,7 +11,8 @@
 
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Camera,
@@ -197,18 +198,26 @@ export default function FindYourselfModal({
     return results.reduce((sum, r) => sum + r.totalPhotoCount, 0);
   }, [results]);
 
-  if (!isOpen) return null;
+  // Use portal to render at body level (avoids overflow:hidden issues)
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
-  return (
+  if (!isOpen || !mounted) return null;
+
+  const modalContent = (
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
         onClick={handleClose}
       />
 
       {/* Modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 pointer-events-none">
         <div
           className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden pointer-events-auto flex flex-col"
           onClick={e => e.stopPropagation()}
@@ -310,6 +319,9 @@ export default function FindYourselfModal({
       </div>
     </>
   );
+
+  // Render via portal to escape overflow:hidden containers
+  return createPortal(modalContent, document.body);
 }
 
 // ============================================

@@ -34,12 +34,18 @@ export default function EventDetailView() {
     setPendingFiles,
   } = usePhotos();
   
-  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+  const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Multi-select state
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<string>>(new Set());
+  
+  // Derive selectedPhoto from photos array to get fresh data after updates
+  const selectedPhoto = useMemo(() => {
+    if (!selectedPhotoId) return null;
+    return photos.find(p => p.id === selectedPhotoId) ?? null;
+  }, [photos, selectedPhotoId]);
   
   // Delete confirmation modal state
   const [showDeleteEventModal, setShowDeleteEventModal] = useState(false);
@@ -283,7 +289,7 @@ export default function EventDetailView() {
                 return (
                   <button
                     key={photo.id}
-                    onClick={() => isMultiSelectMode ? togglePhotoSelection(photo.id) : setSelectedPhoto(photo)}
+                    onClick={() => isMultiSelectMode ? togglePhotoSelection(photo.id) : setSelectedPhotoId(photo.id)}
                     className={`
                       relative aspect-square rounded-xl overflow-hidden
                       bg-gray-100 dark:bg-gray-800
@@ -334,7 +340,7 @@ export default function EventDetailView() {
       {selectedPhoto && (
         <PhotoModal 
           photo={selectedPhoto}
-          onClose={() => setSelectedPhoto(null)}
+          onClose={() => setSelectedPhotoId(null)}
         />
       )}
       

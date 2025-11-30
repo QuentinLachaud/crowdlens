@@ -105,7 +105,11 @@ export class Router<E = unknown> {
   ): Promise<Response | null> {
     const url = new URL(request.url);
     const method = request.method;
+    // Strip query string for pattern matching
     const pathname = url.pathname;
+    
+    // Debug logging
+    console.log(`[Router] ${method} ${pathname}`);
     
     for (const route of this.routes) {
       // Check method
@@ -113,9 +117,11 @@ export class Router<E = unknown> {
         continue;
       }
       
-      // Check pattern
+      // Check pattern against pathname (without query string)
       const match = pathname.match(route.pattern);
       if (!match) continue;
+      
+      console.log(`[Router] Matched route: ${route.pattern}`);
       
       // Extract params
       const params: RouteParams = {};

@@ -22,10 +22,16 @@ import { Photo } from '@/types';
 export default function PhotosTab() {
   const { photos, events, photoFilters, setPhotoFilters, togglePhotoFavorite, photosTabZoom, setPhotosTabZoom, setPendingFiles } = usePhotos();
   
-  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+  const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
   const [showEventDropdown, setShowEventDropdown] = useState(false);
   const [eventSearch, setEventSearch] = useState('');
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  
+  // Derive selectedPhoto from photos array to get fresh data after updates
+  const selectedPhoto = useMemo(() => {
+    if (!selectedPhotoId) return null;
+    return photos.find(p => p.id === selectedPhotoId) ?? null;
+  }, [photos, selectedPhotoId]);
   
   const eventDropdownRef = useRef<HTMLDivElement>(null);
   const locationDropdownRef = useRef<HTMLDivElement>(null);
@@ -384,7 +390,7 @@ export default function PhotosTab() {
             <div key={photo.id} className="relative group">
               <PhotoThumbnail
                 photo={photo}
-                onClick={() => setSelectedPhoto(photo)}
+                onClick={() => setSelectedPhotoId(photo.id)}
               />
               {/* Favorite star overlay */}
               <button
@@ -411,7 +417,7 @@ export default function PhotosTab() {
       {selectedPhoto && (
         <PhotoModal
           photo={selectedPhoto}
-          onClose={() => setSelectedPhoto(null)}
+          onClose={() => setSelectedPhotoId(null)}
         />
       )}
     </div>
