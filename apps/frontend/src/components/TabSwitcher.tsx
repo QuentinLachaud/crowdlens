@@ -1,14 +1,33 @@
 /**
- * TabSwitcher - Navigation between Photos, Map, and Events views.
+ * TabSwitcher - Navigation between Events, Map, Photos, and People views.
  * 
  * Renders a clean tab bar with smooth transitions between active states.
- * Supports "photos", "map", and "events" tabs.
+ * Tab order: Events, Map, Photos, People
  */
 
 'use client';
 
-import { Images, Map, Calendar } from 'lucide-react';
+import { Calendar, Images, Users } from 'lucide-react';
 import { ActiveTab } from '@/types';
+
+/** Custom globe/map icon with more visual appeal */
+const MapGlobeIcon = ({ className }: { className?: string }) => (
+  <svg 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round"
+    className={className}
+  >
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+    <path d="M2 12h20" />
+    <path d="M12 2c-2.5 2.5-4 6.5-4 10s1.5 7.5 4 10" />
+    <path d="M12 2c2.5 2.5 4 6.5 4 10s-1.5 7.5-4 10" />
+  </svg>
+);
 
 interface TabSwitcherProps {
   activeTab: ActiveTab;
@@ -16,10 +35,11 @@ interface TabSwitcherProps {
 }
 
 export default function TabSwitcher({ activeTab, onTabChange }: TabSwitcherProps) {
-  const tabs: { id: ActiveTab; label: string; icon: typeof Images }[] = [
-    { id: 'photos', label: 'Photos', icon: Images },
-    { id: 'map', label: 'Map', icon: Map },
+  const tabs: { id: ActiveTab; label: string; icon: React.ElementType }[] = [
     { id: 'events', label: 'Events', icon: Calendar },
+    { id: 'map', label: 'Map', icon: MapGlobeIcon },
+    { id: 'photos', label: 'Photos', icon: Images },
+    { id: 'people', label: 'People', icon: Users },
   ];
   
   return (

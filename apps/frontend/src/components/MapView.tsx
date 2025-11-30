@@ -7,6 +7,7 @@
  * - Clickable event thumbnails at locations
  * - Event filtering
  * - Responsive height
+ * - Clicking event markers opens event detail
  */
 
 'use client';
@@ -34,7 +35,11 @@ const MapContainer = dynamic(
   }
 );
 
-export default function MapView() {
+interface MapViewProps {
+  onEventClick?: (eventId: string) => void;
+}
+
+export default function MapView({ onEventClick }: MapViewProps) {
   const { photos, events, mapFilters, setSelectedEventId } = usePhotos();
   
   // Filter photos by selected events (if any filters active)
@@ -65,6 +70,8 @@ export default function MapView() {
   // Handle event click to navigate to event detail
   const handleEventClick = (eventId: string) => {
     setSelectedEventId(eventId);
+    // Call the parent handler to switch tabs
+    onEventClick?.(eventId);
   };
   
   return (

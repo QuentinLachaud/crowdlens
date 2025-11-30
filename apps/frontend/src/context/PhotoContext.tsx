@@ -75,6 +75,7 @@ interface PhotoContextValue {
   getPhotosForEvent: (eventId: string) => Photo[];
   getPhotosWithLocation: () => Photo[];
   toggleFavorite: (eventId: string) => void;
+  togglePhotoFavorite: (photoId: string) => void;
   deletePhoto: (photoId: string) => void;
   deleteEvent: (eventId: string) => void;
 }
@@ -97,6 +98,9 @@ export function PhotoProvider({ children }: { children: ReactNode }) {
     searchQuery: '',
     selectedEventId: null,
     selectedYear: null,
+    showFavoritesOnly: false,
+    selectedCountry: null,
+    selectedCity: null,
   });
   const [mapFilters, setMapFiltersState] = useState<MapFilters>({
     selectedEventIds: [],
@@ -212,6 +216,39 @@ export function PhotoProvider({ children }: { children: ReactNode }) {
       );
       
       setPhotos(prev => [...prev, ...newPhotos]);
+      
+      // Auto-infer event location from photos if event doesn't have location
+      setEvents(prev => prev.map(e => {
+        if (e.id !== eventId) return e;
+        // Skip if event already has location
+        if (e.locationLat !== undefined && e.locationLng !== undefined) return e;
+        
+        // Find photos with GPS coordinates
+        const photosWithGps = newPhotos.filter(p => p.gpsLat !== null && p.gpsLng !== null);
+        if (photosWithGps.length === 0) return e;
+        
+        // Calculate the most common location (centroid of all GPS points)
+        const avgLat = photosWithGps.reduce((sum, p) => sum + (p.gpsLat || 0), 0) / photosWithGps.length;
+        const avgLng = photosWithGps.reduce((sum, p) => sum + (p.gpsLng || 0), 0) / photosWithGps.length;
+        
+        // Reverse geocode to get location name (fire-and-forget)
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${avgLat}&lon=${avgLng}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.display_name) {
+              const parts = data.display_name.split(', ');
+              const locationName = parts.slice(0, 2).join(', ');
+              // Update event with location name
+              setEvents(prev2 => prev2.map(e2 => 
+                e2.id === eventId ? { ...e2, locationName } : e2
+              ));
+            }
+          })
+          .catch(() => {/* Ignore reverse geocode errors */});
+        
+        return { ...e, locationLat: avgLat, locationLng: avgLng };
+      }));
+      
       setUploadState('success');
       
       // Reset after showing success briefly
@@ -267,6 +304,13 @@ export function PhotoProvider({ children }: { children: ReactNode }) {
     setPhotos(prev => prev.filter(p => p.id !== photoId));
   }, []);
   
+  // Toggle photo favorite status
+  const togglePhotoFavorite = useCallback((photoId: string) => {
+    setPhotos(prev => prev.map(p => 
+      p.id === photoId ? { ...p, isFavorite: !p.isFavorite } : p
+    ));
+  }, []);
+  
   // Delete an event and its photos
   const deleteEvent = useCallback((eventId: string) => {
     setEvents(prev => prev.filter(e => e.id !== eventId));
@@ -303,6 +347,7 @@ export function PhotoProvider({ children }: { children: ReactNode }) {
     getPhotosForEvent,
     getPhotosWithLocation,
     toggleFavorite,
+    togglePhotoFavorite,
     deletePhoto,
     deleteEvent,
   };

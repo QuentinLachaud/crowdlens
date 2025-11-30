@@ -25,7 +25,7 @@ const LocationPickerMap = dynamic(
 );
 
 export default function CreateEventModal() {
-  const { showCreateEventModal, setShowCreateEventModal, createEvent } = usePhotos();
+  const { showCreateEventModal, setShowCreateEventModal, createEvent, events } = usePhotos();
   
   // Form state
   const [name, setName] = useState('');
@@ -42,13 +42,20 @@ export default function CreateEventModal() {
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // Check for duplicate name
+  const isDuplicateName = useMemo(() => {
+    if (!name.trim()) return false;
+    return events.some(e => e.name.toLowerCase() === name.trim().toLowerCase());
+  }, [name, events]);
+  
   // Check if form is complete
   const isFormComplete = useMemo(() => {
     if (!name.trim()) return false;
+    if (isDuplicateName) return false;
     if (!startDate) return false;
     if (isMultiDay && !endDate) return false;
     return true;
-  }, [name, startDate, endDate, isMultiDay]);
+  }, [name, isDuplicateName, startDate, endDate, isMultiDay]);
   
   // Reset form when modal closes
   useEffect(() => {
@@ -155,15 +162,25 @@ export default function CreateEventModal() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Summer Vacation 2024"
-                className="
-                  w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700
+                className={`
+                  w-full px-4 py-3 rounded-xl border-2
                   bg-white dark:bg-gray-800 text-gray-900 dark:text-white
                   placeholder-gray-400 dark:placeholder-gray-500
-                  focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20
+                  focus:outline-none focus:ring-2
                   transition-all duration-200
-                "
+                  ${isDuplicateName 
+                    ? 'border-red-400 dark:border-red-500 focus:border-red-500 focus:ring-red-500/20' 
+                    : 'border-gray-200 dark:border-gray-700 focus:border-primary-500 focus:ring-primary-500/20'
+                  }
+                `}
                 autoFocus
               />
+              {isDuplicateName && (
+                <p className="mt-2 text-sm text-red-500 dark:text-red-400 flex items-center gap-1">
+                  <span>⚠️</span>
+                  <span>An event with this name already exists</span>
+                </p>
+              )}
             </div>
             
             {/* Event Type */}
@@ -232,9 +249,9 @@ export default function CreateEventModal() {
               >
                 <span 
                   className={`
-                    absolute top-1 w-6 h-6 bg-white rounded-full shadow-md
+                    absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-md
                     transition-transform duration-200
-                    ${isMultiDay ? 'translate-x-7' : 'translate-x-1'}
+                    ${isMultiDay ? 'translate-x-6' : 'translate-x-0'}
                   `}
                 />
               </button>

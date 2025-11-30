@@ -180,19 +180,28 @@ export default function LocationPickerMap({
               </svg>
             </div>
             
-            {/* "Here!" button */}
+            {/* "Here!" button - exciting design */}
             {showConfirm && (
               <button
                 onClick={handleConfirm}
                 className="
-                  absolute -top-2 left-full ml-2 whitespace-nowrap
-                  px-4 py-2 bg-primary-500 hover:bg-primary-600 
-                  text-white font-bold rounded-full shadow-lg
-                  animate-pop-in transition-colors
+                  absolute -top-3 left-full ml-3 whitespace-nowrap
+                  px-5 py-2.5 
+                  bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500
+                  hover:from-emerald-600 hover:via-green-600 hover:to-teal-600
+                  text-white font-bold text-lg rounded-full 
+                  shadow-xl shadow-green-500/40 hover:shadow-2xl hover:shadow-green-500/50
+                  animate-pop-in transition-all duration-300
                   pointer-events-auto
+                  hover:scale-110 active:scale-95
+                  ring-4 ring-white/30
                 "
               >
-                Here! ✓
+                <span className="flex items-center gap-2">
+                  <span>📍</span>
+                  <span>Here!</span>
+                  <span className="text-xl">✨</span>
+                </span>
               </button>
             )}
           </div>

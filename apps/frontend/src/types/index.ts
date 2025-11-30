@@ -22,6 +22,7 @@ export type EventType =
   | 'anniversary'
   | 'corporate'
   | 'sports'
+  | 'race'
   | 'religious'
   | 'charity'
   | 'exhibition'
@@ -43,6 +44,7 @@ export const EVENT_TYPE_LABELS: Record<EventType, string> = {
   'anniversary': 'Anniversary',
   'corporate': 'Corporate Event',
   'sports': 'Sports Event',
+  'race': 'Race',
   'religious': 'Religious Event',
   'charity': 'Charity Event',
   'exhibition': 'Exhibition',
@@ -94,6 +96,8 @@ export interface Photo {
   metadata: PhotoMetadata;
   /** Original file (only in memory, not persisted) */
   file?: File;
+  /** Whether the photo is marked as favorite */
+  isFavorite?: boolean;
 }
 
 /**
@@ -158,6 +162,9 @@ export interface PhotoFilters {
   searchQuery: string;
   selectedEventId: string | null;
   selectedYear: number | null;
+  showFavoritesOnly: boolean;
+  selectedCountry: string | null;
+  selectedCity: string | null;
 }
 
 /** Map view filter state */
@@ -174,7 +181,7 @@ export interface EventFilters {
 }
 
 /** Main navigation tab */
-export type ActiveTab = 'photos' | 'map' | 'events';
+export type ActiveTab = 'events' | 'map' | 'photos' | 'people';
 
 /**
  * User's current location.

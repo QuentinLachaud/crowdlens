@@ -64,7 +64,7 @@ export default function HelpPanel({ isOpen, onClose }: HelpPanelProps) {
                 <h3 className="font-semibold">Events (Folders)</h3>
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Organize your photos into events—like "Summer Vacation 2024" or "Sarah's Birthday". 
+                Organize your photos into events—like &quot;Summer Vacation 2024&quot; or &quot;Sarah&apos;s Birthday&quot;. 
                 Each time you upload, you can choose an existing event or create a new one.
               </p>
             </section>
@@ -83,8 +83,8 @@ export default function HelpPanel({ isOpen, onClose }: HelpPanelProps) {
                 <li><strong>GPS location</strong> — where the photo was taken</li>
               </ul>
               <p className="text-sm text-gray-500 dark:text-gray-500 italic">
-                If your photos don't have this metadata, they'll still work fine—they just won't appear on the map, 
-                and we'll use the upload time instead of the capture time.
+                If your photos don&apos;t have this metadata, they&apos;ll still work fine—they just won&apos;t appear on the map, 
+                and we&apos;ll use the upload time instead of the capture time.
               </p>
             </section>
             

@@ -19,10 +19,16 @@ import { formatDate, getCoverPhoto } from '@/utils/helpers';
 interface SidebarProps {
   isCollapsed: boolean;
   onToggle: () => void;
+  onEventSelect?: (eventId: string) => void;
 }
 
-export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
+export default function Sidebar({ isCollapsed, onToggle, onEventSelect }: SidebarProps) {
   const { events, photos, setShowCreateEventModal, setSelectedEventId } = usePhotos();
+  
+  const handleEventClick = (eventId: string) => {
+    setSelectedEventId(eventId);
+    onEventSelect?.(eventId);
+  };
   
   // Sort events by date (most recent first)
   const sortedEvents = [...events].sort((a, b) => {
@@ -106,7 +112,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                   return (
                     <button
                       key={event.id}
-                      onClick={() => setSelectedEventId(event.id)}
+                      onClick={() => handleEventClick(event.id)}
                       className="
                         w-full flex items-center gap-3 p-3 rounded-xl
                         hover:bg-gray-50 dark:hover:bg-gray-800
@@ -164,7 +170,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
               return (
                 <button
                   key={event.id}
-                  onClick={() => setSelectedEventId(event.id)}
+                  onClick={() => handleEventClick(event.id)}
                   className="
                     w-10 h-10 mx-auto rounded-lg overflow-hidden
                     hover:ring-2 hover:ring-primary-500 transition-all

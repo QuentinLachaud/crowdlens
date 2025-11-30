@@ -158,7 +158,7 @@ export function getZoomForWidth(widthKm: number): number {
 }
 
 /**
- * Calculate appropriate zoom for ~5000km view width.
- * This gives a good overview of a continent-sized area.
+ * Calculate appropriate zoom for ~400km view width.
+ * This gives a good view of a country-sized area (e.g., all of England visible).
  */
-export const DEFAULT_ZOOM = getZoomForWidth(5000); // ~3
+export const DEFAULT_ZOOM = getZoomForWidth(400); // ~6-7

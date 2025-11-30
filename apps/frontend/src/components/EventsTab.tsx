@@ -3,14 +3,16 @@
  * 
  * Features:
  * - Filter ribbon with favorites toggle, date sort, location filter
+ * - Event search box
  * - Event cards with photo cycling, favorite star, edit/add buttons
  * - Single event detail view with zoom slider
+ * - Photo upload button in ribbon
  */
 
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Star, ArrowUpDown, MapPin, Calendar, FolderOpen } from 'lucide-react';
+import { useMemo, useState, useRef, ChangeEvent } from 'react';
+import { Star, ArrowUpDown, MapPin, Calendar, FolderOpen, Upload, Plus, Search } from 'lucide-react';
 import { usePhotos } from '@/context/PhotoContext';
 import { getCoverPhoto, getDateRange } from '@/utils/helpers';
 import EventCardEnhanced from './EventCardEnhanced';
@@ -39,16 +41,38 @@ export default function EventsTab() {
     setEventFilters,
     selectedEventId,
     setSelectedEventId,
+    setPendingFiles,
   } = usePhotos();
   
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
   
   // Get unique locations for filter
   const locations = useMemo(() => getUniqueLocations(events), [events]);
   
+  // Handle file upload
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      setPendingFiles(files);
+    }
+    e.target.value = '';
+  };
+  
   // Filter and sort events
   const filteredEvents = useMemo(() => {
     let filtered = [...events];
+    
+    // Filter by search query
+    if (searchQuery) {
+      filtered = filtered.filter(e => 
+        e.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        e.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        e.locationName?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
     
     // Filter by favorites
     if (eventFilters.showFavoritesOnly) {
@@ -86,7 +110,7 @@ export default function EventsTab() {
     });
     
     return filtered;
-  }, [events, eventFilters]);
+  }, [events, eventFilters, searchQuery]);
   
   // If an event is selected, show the detail view
   if (selectedEventId) {
@@ -118,6 +142,25 @@ export default function EventsTab() {
       {/* Filter Ribbon */}
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
         <div className="flex flex-wrap items-center gap-4">
+          {/* Search Input */}
+          <div className="relative flex-1 min-w-[200px] max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search events..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="
+                w-full pl-10 pr-4 py-2 rounded-lg
+                bg-gray-100 dark:bg-gray-800 
+                border-0 text-gray-900 dark:text-white
+                placeholder-gray-400 dark:placeholder-gray-500
+                focus:outline-none focus:ring-2 focus:ring-primary-500
+                transition-all duration-200
+              "
+            />
+          </div>
+          
           {/* Favorites Toggle */}
           <button
             onClick={toggleFavoritesFilter}
@@ -248,8 +291,43 @@ export default function EventsTab() {
           )}
           
           {/* Results count */}
-          <div className="ml-auto text-sm text-gray-500 dark:text-gray-400">
-            {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''}
+          <div className="ml-auto flex items-center gap-4">
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''}
+            </span>
+            
+            {/* Upload Photos Button */}
+            <div className="flex items-center gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <input
+                ref={folderInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                // @ts-ignore - webkitdirectory is valid but not in React types
+                webkitdirectory=""
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="
+                  flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm
+                  bg-primary-500 hover:bg-primary-600 text-white
+                  transition-all duration-200 shadow-sm hover:shadow-md
+                "
+              >
+                <Upload className="w-4 h-4" />
+                <span>Upload Photos</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

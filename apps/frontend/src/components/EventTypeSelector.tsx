@@ -15,9 +15,28 @@ import {
   ChevronDown, Search, Check,
   Music, PartyPopper, GraduationCap, Heart, Palmtree, Camera,
   School, Users, Cake, Gift, Briefcase, Trophy, Church, HandHeart,
-  Image, Presentation, HelpCircle
+  Image, Presentation, HelpCircle, PersonStanding
 } from 'lucide-react';
 import { EventType, EVENT_TYPE_LABELS } from '@/types';
+
+/** Running stickman SVG icon component */
+const RunningIcon = ({ className }: { className?: string }) => (
+  <svg 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round"
+    className={className}
+  >
+    <circle cx="17" cy="4" r="2" />
+    <path d="M15 9l-3 5 3 4" />
+    <path d="M12 14l-3-3-3 4" />
+    <path d="M9 11l4-3 2 1" />
+    <path d="M3 18h4l3-8" />
+  </svg>
+);
 
 /** Icon mapping for event types */
 const EVENT_TYPE_ICONS: Record<EventType, React.ElementType> = {
@@ -34,6 +53,7 @@ const EVENT_TYPE_ICONS: Record<EventType, React.ElementType> = {
   'anniversary': Gift,
   'corporate': Briefcase,
   'sports': Trophy,
+  'race': PersonStanding,
   'religious': Church,
   'charity': HandHeart,
   'exhibition': Image,
