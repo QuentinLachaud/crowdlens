@@ -4,3 +4,8 @@ compatibility_date = "2024-01-01"
 
 [dev]
 port = 8787
+
+[[d1_databases]]
+binding = "DB"
+database_name = "crowdlens"
+database_id = "cb52b062-c3ec-4fec-a6d1-ea8cdcf430b7"
