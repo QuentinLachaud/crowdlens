@@ -4,6 +4,6 @@ module.exports = {
     // Allow unescaped quotes and apostrophes in JSX text
     "react/no-unescaped-entities": "off",
     // Allow <img> tags (we use blob URLs which next/image doesn't support well)
-    "@next/next/no-img-element": "off"
-  }
+    "@next/next/no-img-element": "off",
+  },
 };
