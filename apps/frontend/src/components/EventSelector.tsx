@@ -1,9 +1,10 @@
 /**
  * EventSelector - Modal for choosing which event to upload photos to.
  * 
- * Appears after user selects files, allowing them to:
- * - Choose an existing event from a list
- * - Create a new event with a custom name
+ * Displayed after user selects files for upload.
+ * Options:
+ * - Select an existing event from the list
+ * - Quick-create a new event with just a name
  */
 
 'use client';
@@ -11,6 +12,7 @@
 import { useState } from 'react';
 import { X, Plus, Folder, Check } from 'lucide-react';
 import { usePhotos } from '@/context/PhotoContext';
+import { EVENT_TYPE_LABELS } from '@/types';
 
 export default function EventSelector() {
   const { 
@@ -26,15 +28,21 @@ export default function EventSelector() {
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newEventName, setNewEventName] = useState('');
   
-  // Only show when in selecting-event state
+  // Only render when in selecting-event state
   if (uploadState !== 'selecting-event') return null;
   
   const handleConfirm = async () => {
     let eventId = selectedEventId;
     
-    // If creating new event, create it first
+    // Quick-create event if creating new
     if (isCreatingNew && newEventName.trim()) {
-      const newEvent = createEvent(newEventName.trim());
+      const newEvent = createEvent({
+        name: newEventName.trim(),
+        eventType: 'other',
+        isMultiDay: false,
+        startDate: new Date(),
+        endDate: null,
+      });
       eventId = newEvent.id;
     }
     
@@ -59,7 +67,7 @@ export default function EventSelector() {
     <>
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/50 z-50 animate-fade-in"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 animate-fade-in"
         onClick={cancelUpload}
       />
       
@@ -124,10 +132,10 @@ export default function EventSelector() {
                   onChange={e => setNewEventName(e.target.value)}
                   autoFocus
                   className="
-                    w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600
+                    w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700
                     bg-white dark:bg-gray-800 text-gray-900 dark:text-white
                     placeholder-gray-400 dark:placeholder-gray-500
-                    focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
+                    focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20
                     transition-all duration-200
                   "
                 />
@@ -162,8 +170,11 @@ export default function EventSelector() {
                       <Folder className="w-5 h-5" />
                     </div>
                     <div className="text-left flex-1">
-                      <span className="font-medium text-gray-900 dark:text-white">
+                      <span className="font-medium text-gray-900 dark:text-white block">
                         {event.name}
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {EVENT_TYPE_LABELS[event.eventType]}
                       </span>
                     </div>
                     {selectedEventId === event.id && (

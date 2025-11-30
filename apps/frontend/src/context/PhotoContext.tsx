@@ -1,21 +1,36 @@
 /**
  * PhotoContext - Global state management for photos and events.
  * 
- * This context provides:
- * - Photos and events storage (in-memory for MVP)
- * - Methods to add/remove photos and events
+ * Features:
+ * - Photos and events storage with localStorage persistence
+ * - CRUD operations for photos and events
  * - Filter state for both photos and map views
+ * - Upload workflow management
  * 
- * Designed to be easily replaceable with API calls in the future.
+ * Persistence: Data auto-saves to localStorage on every mutation.
  */
 
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { Photo, Event, PhotoFilters, MapFilters, UploadState } from '@/types';
+import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import { Photo, Event, PhotoFilters, MapFilters, UploadState, EventType } from '@/types';
 import { generateId } from '@/utils/helpers';
 import { processPhotoFiles } from '@/utils/exif';
 import { isValidImageFile } from '@/utils/helpers';
+import { savePhotos, loadPhotos, saveEvents, loadEvents } from '@/services/storage';
+
+/** Event creation parameters */
+export interface CreateEventParams {
+  name: string;
+  description?: string;
+  eventType: EventType;
+  locationName?: string;
+  locationLat?: number;
+  locationLng?: number;
+  isMultiDay: boolean;
+  startDate: Date | null;
+  endDate: Date | null;
+}
 
 interface PhotoContextValue {
   // Data
@@ -34,9 +49,13 @@ interface PhotoContextValue {
   // Selected states
   selectedEventId: string | null;
   
+  // Modal state
+  showCreateEventModal: boolean;
+  setShowCreateEventModal: (show: boolean) => void;
+  
   // Actions
   setPendingFiles: (files: File[]) => void;
-  createEvent: (name: string) => Event;
+  createEvent: (params: CreateEventParams) => Event;
   uploadPhotosToEvent: (eventId: string) => Promise<void>;
   cancelUpload: () => void;
   setPhotoFilters: (filters: Partial<PhotoFilters>) => void;
@@ -51,9 +70,10 @@ interface PhotoContextValue {
 const PhotoContext = createContext<PhotoContextValue | null>(null);
 
 export function PhotoProvider({ children }: { children: ReactNode }) {
-  // Core data state
+  // Core data state - initialized from localStorage
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
+  const [isHydrated, setIsHydrated] = useState(false);
   
   // Upload state
   const [uploadState, setUploadState] = useState<UploadState>('idle');
@@ -70,8 +90,32 @@ export function PhotoProvider({ children }: { children: ReactNode }) {
     selectedEventIds: [],
   });
   
-  // Selection state
+  // Selection and modal state
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [showCreateEventModal, setShowCreateEventModal] = useState(false);
+  
+  // Load data from localStorage on mount
+  useEffect(() => {
+    const storedPhotos = loadPhotos();
+    const storedEvents = loadEvents();
+    setPhotos(storedPhotos);
+    setEvents(storedEvents);
+    setIsHydrated(true);
+  }, []);
+  
+  // Persist photos to localStorage when they change
+  useEffect(() => {
+    if (isHydrated) {
+      savePhotos(photos);
+    }
+  }, [photos, isHydrated]);
+  
+  // Persist events to localStorage when they change
+  useEffect(() => {
+    if (isHydrated) {
+      saveEvents(events);
+    }
+  }, [events, isHydrated]);
   
   // Set pending files and show event selector
   const setPendingFiles = useCallback((files: File[]) => {
@@ -84,11 +128,19 @@ export function PhotoProvider({ children }: { children: ReactNode }) {
     setUploadState('selecting-event');
   }, []);
   
-  // Create a new event
-  const createEvent = useCallback((name: string): Event => {
+  // Create a new event with full properties
+  const createEvent = useCallback((params: CreateEventParams): Event => {
     const event: Event = {
       id: generateId(),
-      name: name.trim() || 'Untitled Event',
+      name: params.name.trim() || 'Untitled Event',
+      description: params.description,
+      eventType: params.eventType,
+      locationName: params.locationName,
+      locationLat: params.locationLat,
+      locationLng: params.locationLng,
+      isMultiDay: params.isMultiDay,
+      startDate: params.startDate,
+      endDate: params.endDate,
       createdAt: new Date(),
     };
     setEvents(prev => [...prev, event]);
@@ -175,6 +227,8 @@ export function PhotoProvider({ children }: { children: ReactNode }) {
     photoFilters,
     mapFilters,
     selectedEventId,
+    showCreateEventModal,
+    setShowCreateEventModal,
     setPendingFiles,
     createEvent,
     uploadPhotosToEvent,

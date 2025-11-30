@@ -1,9 +1,11 @@
 /**
- * AppShell - Main application layout and state management.
+ * AppShell - Main application layout with sidebar navigation.
  * 
- * Coordinates:
- * - Tab switching between Photos and Map views
- * - Global modal/overlay display (event selector)
+ * Structure:
+ * - Fixed header at top
+ * - Collapsible sidebar on left
+ * - Main content area
+ * - Global modals (event selector, create event)
  */
 
 'use client';
@@ -12,27 +14,42 @@ import { useState } from 'react';
 import { ActiveTab } from '@/types';
 import Header from './Header';
 import TabSwitcher from './TabSwitcher';
+import Sidebar from './Sidebar';
 import PhotosTab from './PhotosTab';
 import MapView from './MapView';
 import EventSelector from './EventSelector';
+import CreateEventModal from './CreateEventModal';
 
 export default function AppShell() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('photos');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Header />
       <TabSwitcher activeTab={activeTab} onTabChange={setActiveTab} />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Tab content with smooth transitions */}
-        <div className="animate-fade-in">
+      {/* Sidebar */}
+      <Sidebar 
+        isCollapsed={sidebarCollapsed} 
+        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} 
+      />
+      
+      {/* Main content with sidebar offset */}
+      <main 
+        className={`
+          transition-all duration-300 ease-out pt-8 pb-8 px-4 sm:px-6 lg:px-8
+          ${sidebarCollapsed ? 'ml-16' : 'ml-72'}
+        `}
+      >
+        <div className="max-w-6xl mx-auto animate-fade-in">
           {activeTab === 'photos' ? <PhotosTab /> : <MapView />}
         </div>
       </main>
       
-      {/* Global overlays */}
+      {/* Global modals */}
       <EventSelector />
+      <CreateEventModal />
     </div>
   );
 }
