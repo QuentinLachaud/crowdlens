@@ -50,14 +50,8 @@ next-env.d.ts
 # Vercel
 .vercel
 
-# Debug
+# Cache directories
 .npm
-.eslintcache
-
-# Optional npm cache directory
-.npm
-
-# Optional eslint cache
 .eslintcache
 
 # Misc
