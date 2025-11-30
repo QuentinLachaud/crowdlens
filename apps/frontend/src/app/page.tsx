@@ -1,8 +1,14 @@
+/**
+ * Home page - Entry point for the CrowdLens application.
+ * 
+ * Renders the main AppShell which manages:
+ * - Navigation between Photos and Map tabs
+ * - Photo upload and organization
+ * - Event management
+ */
+
+import AppShell from "@/components/AppShell";
+
 export default function Home() {
-  return (
-    <main>
-      <h1>Welcome to CrowdLens</h1>
-      <p>A web app to share photos from any event.</p>
-    </main>
-  );
+  return <AppShell />;
 }

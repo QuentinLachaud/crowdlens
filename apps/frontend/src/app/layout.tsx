@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { PhotoProvider } from "@/context/PhotoContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 
 export const metadata: Metadata = {
   title: "CrowdLens",
-  description: "A web app to share photos from any event",
+  description: "Organize your photos into events and visualize them on a world map",
 };
 
 export default function RootLayout({
@@ -12,8 +14,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body>
+        <ThemeProvider>
+          <PhotoProvider>
+            {children}
+          </PhotoProvider>
+        </ThemeProvider>
+      </body>
     </html>
   );
 }
