@@ -5,7 +5,7 @@
  * - Minimalist design
  * - Prominent "Add Event" button with plus icon
  * - Event list quick access
- * - Collapsible on mobile
+ * - Hover to expand, leave to collapse
  */
 
 'use client';
@@ -18,11 +18,12 @@ import { formatDate, getCoverPhoto } from '@/utils/helpers';
 
 interface SidebarProps {
   isCollapsed: boolean;
-  onToggle: () => void;
+  onExpand: () => void;
+  onCollapse: () => void;
   onEventSelect?: (eventId: string) => void;
 }
 
-export default function Sidebar({ isCollapsed, onToggle, onEventSelect }: SidebarProps) {
+export default function Sidebar({ isCollapsed, onExpand, onCollapse, onEventSelect }: SidebarProps) {
   const { events, photos, setShowCreateEventModal, setSelectedEventId } = usePhotos();
   
   const handleEventClick = (eventId: string) => {
@@ -45,21 +46,18 @@ export default function Sidebar({ isCollapsed, onToggle, onEventSelect }: Sideba
         transition-all duration-300 ease-out
         ${isCollapsed ? 'w-16' : 'w-72'}
       `}
+      onMouseEnter={onExpand}
+      onMouseLeave={onCollapse}
     >
-      {/* Toggle button */}
-      <button
-        onClick={onToggle}
-        className="
-          absolute -right-3 top-6 z-40
-          w-6 h-6 bg-white dark:bg-gray-800 
-          border border-gray-200 dark:border-gray-700 rounded-full
-          flex items-center justify-center
-          text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200
-          shadow-sm hover:shadow transition-all
-        "
-      >
-        {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-      </button>
+      {/* Visual indicator for expand/collapse */}
+      <div 
+        className={`
+          absolute -right-1 top-0 bottom-0 w-1
+          bg-gradient-to-b from-primary-500/0 via-primary-500/20 to-primary-500/0
+          opacity-0 transition-opacity duration-300
+          ${isCollapsed ? 'hover:opacity-100' : ''}
+        `}
+      />
       
       <div className="h-full flex flex-col p-4">
         {/* Add Event Button */}

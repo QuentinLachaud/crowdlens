@@ -5,17 +5,19 @@
  * - Back button to return to events list
  * - Zoom slider (2-8 images per row)
  * - Photo grid with responsive sizing
+ * - Multi-select photos with delete
+ * - Floating upload button
  * - Event metadata display
  */
 
 'use client';
 
-import { useMemo } from 'react';
-import { ArrowLeft, Calendar, MapPin, Trash2, ZoomIn, ZoomOut } from 'lucide-react';
+import { useMemo, useState, useRef, ChangeEvent } from 'react';
+import { ArrowLeft, Calendar, MapPin, Trash2, ZoomIn, ZoomOut, CheckSquare, Square, X, Plus } from 'lucide-react';
 import { usePhotos } from '@/context/PhotoContext';
 import { getDateRange, groupPhotosByTime } from '@/utils/helpers';
 import PhotoModal from './PhotoModal';
-import { useState } from 'react';
+import ConfirmDeleteModal from './ConfirmDeleteModal';
 import { Photo } from '@/types';
 
 export default function EventDetailView() {
@@ -25,11 +27,22 @@ export default function EventDetailView() {
     events, 
     photos, 
     deleteEvent,
+    deletePhoto,
     eventDetailZoom,
     setEventDetailZoom,
+    setPendingFiles,
   } = usePhotos();
   
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Multi-select state
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
+  const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<string>>(new Set());
+  
+  // Delete confirmation modal state
+  const [showDeleteEventModal, setShowDeleteEventModal] = useState(false);
+  const [showDeletePhotosModal, setShowDeletePhotosModal] = useState(false);
   
   const event = useMemo(() => {
     return events.find(e => e.id === selectedEventId);
@@ -55,11 +68,51 @@ export default function EventDetailView() {
   
   if (!event || !selectedEventId) return null;
   
-  const handleDelete = () => {
-    if (window.confirm(`Are you sure you want to delete "${event.name}" and all its photos?`)) {
-      deleteEvent(selectedEventId);
-      setSelectedEventId(null);
+  const handleDeleteEvent = () => {
+    setShowDeleteEventModal(true);
+  };
+  
+  const confirmDeleteEvent = () => {
+    deleteEvent(selectedEventId);
+    setSelectedEventId(null);
+  };
+  
+  // Toggle photo selection
+  const togglePhotoSelection = (photoId: string) => {
+    setSelectedPhotoIds(prev => {
+      const next = new Set(prev);
+      if (next.has(photoId)) {
+        next.delete(photoId);
+      } else {
+        next.add(photoId);
+      }
+      return next;
+    });
+  };
+  
+  // Exit multi-select mode
+  const exitMultiSelectMode = () => {
+    setIsMultiSelectMode(false);
+    setSelectedPhotoIds(new Set());
+  };
+  
+  // Delete selected photos
+  const deleteSelectedPhotos = () => {
+    setShowDeletePhotosModal(true);
+  };
+  
+  const confirmDeletePhotos = () => {
+    selectedPhotoIds.forEach(id => deletePhoto(id));
+    exitMultiSelectMode();
+  };
+  
+  // Handle file upload
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      setPendingFiles(files);
     }
+    e.target.value = '';
   };
   
   const formatGroupKey = (key: string) => {
@@ -124,6 +177,38 @@ export default function EventDetailView() {
         </div>
         
         <div className="flex items-center gap-4">
+          {/* Multi-select toggle */}
+          <button
+            onClick={() => isMultiSelectMode ? exitMultiSelectMode() : setIsMultiSelectMode(true)}
+            className={`
+              flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
+              transition-all duration-200
+              ${isMultiSelectMode 
+                ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 ring-2 ring-primary-400' 
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+              }
+            `}
+          >
+            {isMultiSelectMode ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+            <span>Select</span>
+          </button>
+          
+          {/* Delete selected photos button (shown in multi-select mode) */}
+          {isMultiSelectMode && selectedPhotoIds.size > 0 && (
+            <button
+              onClick={deleteSelectedPhotos}
+              className="
+                flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
+                bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400
+                hover:bg-red-200 dark:hover:bg-red-900/50
+                transition-all duration-200
+              "
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Delete {selectedPhotoIds.size}</span>
+            </button>
+          )}
+          
           {/* Zoom Slider */}
           <div className="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-xl px-4 py-2 shadow-sm border border-gray-200 dark:border-gray-700">
             <ZoomOut className="w-4 h-4 text-gray-400" />
@@ -151,7 +236,7 @@ export default function EventDetailView() {
           </div>
           
           <button
-            onClick={handleDelete}
+            onClick={handleDeleteEvent}
             className="
               p-2 rounded-lg text-red-500 hover:text-red-600 
               hover:bg-red-50 dark:hover:bg-red-900/20
@@ -172,27 +257,46 @@ export default function EventDetailView() {
               {formatGroupKey(key)}
             </h3>
             <div className={`grid gap-3 ${getGridCols()}`}>
-              {groupPhotos.map(photo => (
-                <button
-                  key={photo.id}
-                  onClick={() => setSelectedPhoto(photo)}
-                  className="
-                    aspect-square rounded-xl overflow-hidden
-                    bg-gray-100 dark:bg-gray-800
-                    hover:ring-2 hover:ring-primary-500 hover:ring-offset-2 
-                    dark:hover:ring-offset-gray-900
-                    transition-all duration-200
-                    hover:scale-[1.02]
-                  "
-                >
-                  <img
-                    src={photo.thumbnailUrl}
-                    alt={photo.fileName}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                </button>
-              ))}
+              {groupPhotos.map(photo => {
+                const isSelected = selectedPhotoIds.has(photo.id);
+                return (
+                  <button
+                    key={photo.id}
+                    onClick={() => isMultiSelectMode ? togglePhotoSelection(photo.id) : setSelectedPhoto(photo)}
+                    className={`
+                      relative aspect-square rounded-xl overflow-hidden
+                      bg-gray-100 dark:bg-gray-800
+                      transition-all duration-200
+                      hover:scale-[1.02]
+                      ${isSelected 
+                        ? 'ring-4 ring-primary-500 ring-offset-2 dark:ring-offset-gray-900' 
+                        : 'hover:ring-2 hover:ring-primary-500 hover:ring-offset-2 dark:hover:ring-offset-gray-900'
+                      }
+                    `}
+                  >
+                    <img
+                      src={photo.thumbnailUrl}
+                      alt={photo.fileName}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                    {/* Selection checkbox overlay */}
+                    {isMultiSelectMode && (
+                      <div className={`
+                        absolute top-2 left-2 w-6 h-6 rounded-full
+                        flex items-center justify-center
+                        transition-all duration-200
+                        ${isSelected 
+                          ? 'bg-primary-500 text-white' 
+                          : 'bg-black/40 text-white border-2 border-white'
+                        }
+                      `}>
+                        {isSelected && <CheckSquare className="w-4 h-4" />}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
         ))}
@@ -212,6 +316,55 @@ export default function EventDetailView() {
           onClose={() => setSelectedPhoto(null)}
         />
       )}
+      
+      {/* Delete Event Confirmation */}
+      <ConfirmDeleteModal
+        isOpen={showDeleteEventModal}
+        onClose={() => setShowDeleteEventModal(false)}
+        onConfirm={confirmDeleteEvent}
+        itemType="event"
+        itemName={event.name}
+        message={`Are you sure you want to delete "${event.name}" and all its ${eventPhotos.length} photos? This cannot be undone.`}
+      />
+      
+      {/* Delete Photos Confirmation */}
+      <ConfirmDeleteModal
+        isOpen={showDeletePhotosModal}
+        onClose={() => setShowDeletePhotosModal(false)}
+        onConfirm={confirmDeletePhotos}
+        itemType="photos"
+        title={`Delete ${selectedPhotoIds.size} photo${selectedPhotoIds.size !== 1 ? 's' : ''}?`}
+        message={`Are you sure you want to delete ${selectedPhotoIds.size} selected photo${selectedPhotoIds.size !== 1 ? 's' : ''}? This cannot be undone.`}
+      />
+      
+      {/* Hidden file input for upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={handleFileChange}
+        className="hidden"
+      />
+      
+      {/* Floating Upload Button */}
+      <button
+        onClick={() => fileInputRef.current?.click()}
+        className="
+          fixed bottom-8 right-8 z-40
+          w-14 h-14 rounded-full
+          bg-gradient-to-r from-primary-500 to-primary-600
+          hover:from-primary-600 hover:to-primary-700
+          text-white shadow-xl shadow-primary-500/30
+          hover:shadow-2xl hover:shadow-primary-500/40
+          hover:scale-110 active:scale-95
+          transition-all duration-300 ease-out
+          flex items-center justify-center
+        "
+        title="Add photos to event"
+      >
+        <Plus className="w-6 h-6" />
+      </button>
     </div>
   );
 }

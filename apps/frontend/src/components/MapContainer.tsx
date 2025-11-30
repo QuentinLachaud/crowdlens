@@ -97,6 +97,9 @@ export default function MapContainer({ clusters, events, photos, onEventClick }:
     <LeafletMapContainer
       center={defaultCenter}
       zoom={DEFAULT_ZOOM}
+      minZoom={2}
+      maxBounds={[[-90, -180], [90, 180]]}
+      maxBoundsViscosity={1.0}
       className="w-full h-full z-0"
       scrollWheelZoom={true}
     >

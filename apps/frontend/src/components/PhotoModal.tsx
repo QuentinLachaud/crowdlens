@@ -7,10 +7,12 @@
 
 'use client';
 
+import { useState } from 'react';
 import { X, Calendar, Clock, MapPin, FileImage, Trash2, Star } from 'lucide-react';
 import { Photo } from '@/types';
 import { formatDate } from '@/utils/helpers';
 import { usePhotos } from '@/context/PhotoContext';
+import ConfirmDeleteModal from './ConfirmDeleteModal';
 
 interface PhotoModalProps {
   photo: Photo;
@@ -20,12 +22,15 @@ interface PhotoModalProps {
 export default function PhotoModal({ photo, onClose }: PhotoModalProps) {
   const { deletePhoto, events, togglePhotoFavorite } = usePhotos();
   const event = events.find(e => e.id === photo.eventId);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   
   const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this photo?')) {
-      deletePhoto(photo.id);
-      onClose();
-    }
+    setShowDeleteModal(true);
+  };
+  
+  const confirmDelete = () => {
+    deletePhoto(photo.id);
+    onClose();
   };
   
   const handleToggleFavorite = (e: React.MouseEvent) => {
@@ -162,6 +167,15 @@ export default function PhotoModal({ photo, onClose }: PhotoModalProps) {
           </div>
         </div>
       </div>
+      
+      {/* Delete Confirmation Modal */}
+      <ConfirmDeleteModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={confirmDelete}
+        itemType="photo"
+        itemName={photo.fileName}
+      />
     </>
   );
 }

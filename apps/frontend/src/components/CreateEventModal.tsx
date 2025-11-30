@@ -3,7 +3,7 @@
  * 
  * Features:
  * - Event name and description
- * - Location picker with map
+ * - Location picker with map and autocomplete
  * - Single/multi-day toggle with date pickers
  * - Event type dropdown with search
  * - Glowing submit button when form is complete
@@ -11,9 +11,9 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { X, MapPin, Calendar, Sparkles } from 'lucide-react';
+import { X, MapPin, Calendar, Sparkles, Search, Loader2 } from 'lucide-react';
 import { usePhotos, CreateEventParams } from '@/context/PhotoContext';
 import { EventType } from '@/types';
 import EventTypeSelector from './EventTypeSelector';
@@ -42,11 +42,81 @@ export default function CreateEventModal() {
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // Location autocomplete state
+  const [locationSearch, setLocationSearch] = useState('');
+  const [locationSuggestions, setLocationSuggestions] = useState<Array<{
+    display_name: string;
+    lat: string;
+    lon: string;
+  }>>([]);
+  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
+  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
+  const locationInputRef = useRef<HTMLInputElement>(null);
+  const locationDropdownRef = useRef<HTMLDivElement>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
   // Check for duplicate name
   const isDuplicateName = useMemo(() => {
     if (!name.trim()) return false;
     return events.some(e => e.name.toLowerCase() === name.trim().toLowerCase());
   }, [name, events]);
+  
+  // Location search with debounce
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    if (locationSearch.length < 2) {
+      setLocationSuggestions([]);
+      setShowLocationSuggestions(false);
+      return;
+    }
+    
+    setIsSearchingLocation(true);
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationSearch)}&limit=5`
+        );
+        const data = await res.json();
+        setLocationSuggestions(data);
+        setShowLocationSuggestions(data.length > 0);
+      } catch (error) {
+        console.error('Location search failed:', error);
+      } finally {
+        setIsSearchingLocation(false);
+      }
+    }, 300);
+    
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [locationSearch]);
+  
+  // Close location dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (locationDropdownRef.current && !locationDropdownRef.current.contains(e.target as Node)) {
+        setShowLocationSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+  
+  // Handle location selection from suggestions
+  const handleLocationSelect = (suggestion: { display_name: string; lat: string; lon: string }) => {
+    const parts = suggestion.display_name.split(', ');
+    const shortName = parts.slice(0, 2).join(', ');
+    setLocationName(shortName);
+    setLocationLat(parseFloat(suggestion.lat));
+    setLocationLng(parseFloat(suggestion.lon));
+    setLocationSearch('');
+    setShowLocationSuggestions(false);
+  };
   
   // Check if form is complete
   const isFormComplete = useMemo(() => {
@@ -72,7 +142,7 @@ export default function CreateEventModal() {
     }
   }, [showCreateEventModal]);
   
-  const handleLocationSelect = (lat: number, lng: number) => {
+  const handleMapLocationSelect = (lat: number, lng: number) => {
     setLocationLat(lat);
     setLocationLng(lng);
     // Try reverse geocoding for location name
@@ -192,24 +262,42 @@ export default function CreateEventModal() {
             </div>
             
             {/* Location */}
-            <div>
+            <div className="relative" ref={locationDropdownRef}>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Location
               </label>
               <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={locationName}
-                  onChange={(e) => setLocationName(e.target.value)}
-                  placeholder="Enter address or pick on map"
-                  className="
-                    flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700
-                    bg-white dark:bg-gray-800 text-gray-900 dark:text-white
-                    placeholder-gray-400 dark:placeholder-gray-500
-                    focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20
-                    transition-all duration-200
-                  "
-                />
+                <div className="relative flex-1">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    ref={locationInputRef}
+                    type="text"
+                    value={locationSearch || locationName}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setLocationSearch(value);
+                      if (!value) {
+                        setLocationName('');
+                        setLocationLat(undefined);
+                        setLocationLng(undefined);
+                      }
+                    }}
+                    onFocus={() => {
+                      if (locationSearch) setShowLocationSuggestions(true);
+                    }}
+                    placeholder="Search for a location..."
+                    className="
+                      w-full pl-11 pr-10 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700
+                      bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                      placeholder-gray-400 dark:placeholder-gray-500
+                      focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20
+                      transition-all duration-200
+                    "
+                  />
+                  {isSearchingLocation && (
+                    <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />
+                  )}
+                </div>
                 <button
                   type="button"
                   onClick={() => setShowLocationPicker(true)}
@@ -224,6 +312,35 @@ export default function CreateEventModal() {
                   <MapPin className="w-5 h-5" />
                 </button>
               </div>
+              
+              {/* Location suggestions dropdown */}
+              {showLocationSuggestions && locationSuggestions.length > 0 && (
+                <div className="
+                  absolute z-50 left-0 right-12 mt-2 
+                  bg-white dark:bg-gray-800 rounded-xl shadow-xl 
+                  border border-gray-200 dark:border-gray-700
+                  py-2 max-h-64 overflow-y-auto
+                ">
+                  {locationSuggestions.map((suggestion, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => handleLocationSelect(suggestion)}
+                      className="
+                        w-full px-4 py-3 text-left text-sm
+                        hover:bg-gray-50 dark:hover:bg-gray-700
+                        flex items-start gap-3 transition-colors
+                      "
+                    >
+                      <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                      <span className="text-gray-700 dark:text-gray-300 leading-snug">
+                        {suggestion.display_name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              
               {locationLat && locationLng && (
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                   📍 {locationLat.toFixed(4)}, {locationLng.toFixed(4)}
@@ -354,7 +471,7 @@ export default function CreateEventModal() {
       {/* Location Picker Map */}
       {showLocationPicker && (
         <LocationPickerMap
-          onSelect={handleLocationSelect}
+          onSelect={handleMapLocationSelect}
           onClose={() => setShowLocationPicker(false)}
           initialLat={locationLat}
           initialLng={locationLng}

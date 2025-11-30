@@ -25,18 +25,26 @@ import EditEventModal from './EditEventModal';
 
 export default function AppShell() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('events');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  
+  // Collapse sidebar when tab is changed
+  const handleTabChange = (tab: ActiveTab) => {
+    setActiveTab(tab);
+    setSidebarCollapsed(true);
+  };
   
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Header />
       
-      {/* Sidebar */}
+      {/* Sidebar - hover to expand, leave to collapse */}
       <Sidebar 
         isCollapsed={sidebarCollapsed} 
-        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+        onExpand={() => setSidebarCollapsed(false)}
+        onCollapse={() => setSidebarCollapsed(true)}
         onEventSelect={(eventId) => {
           setActiveTab('events');
+          setSidebarCollapsed(true);
         }}
       />
       
@@ -47,7 +55,7 @@ export default function AppShell() {
           ${sidebarCollapsed ? 'ml-16' : 'ml-72'}
         `}
       >
-        <TabSwitcher activeTab={activeTab} onTabChange={setActiveTab} />
+        <TabSwitcher activeTab={activeTab} onTabChange={handleTabChange} />
       </div>
       
       {/* Main content with sidebar offset */}

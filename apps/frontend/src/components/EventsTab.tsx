@@ -5,6 +5,7 @@
  * - Filter ribbon with favorites toggle, date sort, location filter
  * - Event search box
  * - Event cards with photo cycling, favorite star, edit/add buttons
+ * - Multi-select events with delete
  * - Single event detail view with zoom slider
  * - Photo upload button in ribbon
  */
@@ -12,11 +13,12 @@
 'use client';
 
 import { useMemo, useState, useRef, ChangeEvent } from 'react';
-import { Star, ArrowUpDown, MapPin, Calendar, FolderOpen, Upload, Plus, Search } from 'lucide-react';
+import { Star, ArrowUpDown, MapPin, Calendar, FolderOpen, Upload, Plus, Search, CheckSquare, Square, Trash2 } from 'lucide-react';
 import { usePhotos } from '@/context/PhotoContext';
 import { getCoverPhoto, getDateRange } from '@/utils/helpers';
 import EventCardEnhanced from './EventCardEnhanced';
 import EventDetailView from './EventDetailView';
+import ConfirmDeleteModal from './ConfirmDeleteModal';
 
 /** Extract unique locations (city-like) from events */
 function getUniqueLocations(events: { locationName?: string }[]): string[] {
@@ -42,12 +44,18 @@ export default function EventsTab() {
     selectedEventId,
     setSelectedEventId,
     setPendingFiles,
+    deleteEvent,
   } = usePhotos();
   
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
+  
+  // Multi-select state
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
+  const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(new Set());
+  const [showDeleteEventsModal, setShowDeleteEventsModal] = useState(false);
   
   // Get unique locations for filter
   const locations = useMemo(() => getUniqueLocations(events), [events]);
@@ -117,6 +125,31 @@ export default function EventsTab() {
     return <EventDetailView />;
   }
   
+  // Toggle event selection
+  const toggleEventSelection = (eventId: string) => {
+    setSelectedEventIds(prev => {
+      const next = new Set(prev);
+      if (next.has(eventId)) {
+        next.delete(eventId);
+      } else {
+        next.add(eventId);
+      }
+      return next;
+    });
+  };
+  
+  // Exit multi-select mode
+  const exitMultiSelectMode = () => {
+    setIsMultiSelectMode(false);
+    setSelectedEventIds(new Set());
+  };
+  
+  // Delete selected events
+  const confirmDeleteEvents = () => {
+    selectedEventIds.forEach(id => deleteEvent(id));
+    exitMultiSelectMode();
+  };
+  
   const toggleFavoritesFilter = () => {
     setEventFilters({ showFavoritesOnly: !eventFilters.showFavoritesOnly });
   };
@@ -142,6 +175,38 @@ export default function EventsTab() {
       {/* Filter Ribbon */}
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
         <div className="flex flex-wrap items-center gap-4">
+          {/* Multi-select toggle */}
+          <button
+            onClick={() => isMultiSelectMode ? exitMultiSelectMode() : setIsMultiSelectMode(true)}
+            className={`
+              flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
+              transition-all duration-200
+              ${isMultiSelectMode 
+                ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 ring-2 ring-primary-400' 
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+              }
+            `}
+          >
+            {isMultiSelectMode ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+            <span>Select</span>
+          </button>
+          
+          {/* Delete selected events button (shown in multi-select mode) */}
+          {isMultiSelectMode && selectedEventIds.size > 0 && (
+            <button
+              onClick={() => setShowDeleteEventsModal(true)}
+              className="
+                flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
+                bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400
+                hover:bg-red-200 dark:hover:bg-red-900/50
+                transition-all duration-200
+              "
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Delete {selectedEventIds.size}</span>
+            </button>
+          )}
+          
           {/* Search Input */}
           <div className="relative flex-1 min-w-[200px] max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -352,21 +417,55 @@ export default function EventsTab() {
             const eventPhotos = photos.filter(p => p.eventId === event.id);
             const coverPhoto = getCoverPhoto(eventPhotos);
             const dateRange = getDateRange(eventPhotos);
+            const isSelected = selectedEventIds.has(event.id);
             
             return (
-              <EventCardEnhanced
-                key={event.id}
-                event={event}
-                photos={eventPhotos}
-                coverPhoto={coverPhoto}
-                photoCount={eventPhotos.length}
-                dateRange={dateRange}
-                onClick={() => setSelectedEventId(event.id)}
-              />
+              <div key={event.id} className="relative">
+                {/* Selection checkbox overlay */}
+                {isMultiSelectMode && (
+                  <button
+                    onClick={() => toggleEventSelection(event.id)}
+                    className={`
+                      absolute top-3 left-3 z-10 w-7 h-7 rounded-full
+                      flex items-center justify-center
+                      transition-all duration-200
+                      ${isSelected 
+                        ? 'bg-primary-500 text-white shadow-lg' 
+                        : 'bg-black/50 text-white border-2 border-white hover:bg-black/70'
+                      }
+                    `}
+                  >
+                    {isSelected && <CheckSquare className="w-4 h-4" />}
+                  </button>
+                )}
+                <div className={`
+                  transition-all duration-200
+                  ${isSelected ? 'ring-4 ring-primary-500 ring-offset-2 dark:ring-offset-gray-900 rounded-2xl' : ''}
+                `}>
+                  <EventCardEnhanced
+                    event={event}
+                    photos={eventPhotos}
+                    coverPhoto={coverPhoto}
+                    photoCount={eventPhotos.length}
+                    dateRange={dateRange}
+                    onClick={() => isMultiSelectMode ? toggleEventSelection(event.id) : setSelectedEventId(event.id)}
+                  />
+                </div>
+              </div>
             );
           })}
         </div>
       )}
+      
+      {/* Delete Events Confirmation */}
+      <ConfirmDeleteModal
+        isOpen={showDeleteEventsModal}
+        onClose={() => setShowDeleteEventsModal(false)}
+        onConfirm={confirmDeleteEvents}
+        itemType="events"
+        title={`Delete ${selectedEventIds.size} event${selectedEventIds.size !== 1 ? 's' : ''}?`}
+        message={`Are you sure you want to delete ${selectedEventIds.size} selected event${selectedEventIds.size !== 1 ? 's' : ''} and all their photos? This cannot be undone.`}
+      />
     </div>
   );
 }

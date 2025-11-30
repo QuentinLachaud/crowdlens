@@ -53,6 +53,8 @@ interface PhotoContextValue {
   // View settings
   eventDetailZoom: number; // 2-8 images per row
   setEventDetailZoom: (zoom: number) => void;
+  photosTabZoom: number; // 2-10 images per row for Photos tab
+  setPhotosTabZoom: (zoom: number) => void;
   
   // Modal state
   showCreateEventModal: boolean;
@@ -114,6 +116,7 @@ export function PhotoProvider({ children }: { children: ReactNode }) {
   
   // View settings
   const [eventDetailZoom, setEventDetailZoom] = useState(4); // Default 4 images per row
+  const [photosTabZoom, setPhotosTabZoom] = useState(6); // Default 6 images per row for Photos tab
   
   // Selection and modal state
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
@@ -329,6 +332,8 @@ export function PhotoProvider({ children }: { children: ReactNode }) {
     selectedEventId,
     eventDetailZoom,
     setEventDetailZoom,
+    photosTabZoom,
+    setPhotosTabZoom,
     showCreateEventModal,
     setShowCreateEventModal,
     showEditEventModal,

@@ -3,6 +3,7 @@
  * 
  * Features:
  * - All photos mosaic view
+ * - Smooth zoom slider
  * - Favorites filter toggle
  * - Event dropdown with search
  * - Country/City filter
@@ -12,14 +13,14 @@
 'use client';
 
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { Star, ChevronDown, Search, X, MapPin, Calendar, Images, Filter } from 'lucide-react';
+import { Star, ChevronDown, Search, X, MapPin, Calendar, Images, Filter, ZoomIn, ZoomOut } from 'lucide-react';
 import { usePhotos } from '@/context/PhotoContext';
 import PhotoThumbnail from './PhotoThumbnail';
 import PhotoModal from './PhotoModal';
 import { Photo } from '@/types';
 
 export default function PhotosTab() {
-  const { photos, events, photoFilters, setPhotoFilters, togglePhotoFavorite } = usePhotos();
+  const { photos, events, photoFilters, setPhotoFilters, togglePhotoFavorite, photosTabZoom, setPhotosTabZoom } = usePhotos();
   
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [showEventDropdown, setShowEventDropdown] = useState(false);
@@ -128,6 +129,23 @@ export default function PhotosTab() {
     photoFilters.selectedEventId || 
     photoFilters.selectedCity || 
     photoFilters.selectedCountry;
+  
+  // Grid columns based on zoom level (2-10 images per row)
+  const getGridCols = () => {
+    const zoom = Math.round(photosTabZoom);
+    switch (zoom) {
+      case 2: return 'grid-cols-2';
+      case 3: return 'grid-cols-2 sm:grid-cols-3';
+      case 4: return 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4';
+      case 5: return 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5';
+      case 6: return 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6';
+      case 7: return 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7';
+      case 8: return 'grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8';
+      case 9: return 'grid-cols-4 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-8 xl:grid-cols-9';
+      case 10: return 'grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-9 xl:grid-cols-10';
+      default: return 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6';
+    }
+  };
   
   return (
     <div className="space-y-6">
@@ -274,8 +292,39 @@ export default function PhotosTab() {
             </button>
           )}
           
+          {/* Spacer */}
+          <div className="flex-1" />
+          
+          {/* Zoom Slider */}
+          <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl px-4 py-2 border border-gray-200 dark:border-gray-700">
+            <ZoomOut className="w-4 h-4 text-gray-400" />
+            <input
+              type="range"
+              min={2}
+              max={10}
+              step={0.1}
+              value={photosTabZoom}
+              onChange={(e) => setPhotosTabZoom(parseFloat(e.target.value))}
+              className="
+                w-28 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer
+                [&::-webkit-slider-thumb]:appearance-none
+                [&::-webkit-slider-thumb]:w-4
+                [&::-webkit-slider-thumb]:h-4
+                [&::-webkit-slider-thumb]:rounded-full
+                [&::-webkit-slider-thumb]:bg-primary-500
+                [&::-webkit-slider-thumb]:shadow-lg
+                [&::-webkit-slider-thumb]:shadow-primary-500/30
+                [&::-webkit-slider-thumb]:cursor-pointer
+                [&::-webkit-slider-thumb]:transition-transform
+                [&::-webkit-slider-thumb]:hover:scale-125
+                [&::-webkit-slider-thumb]:active:scale-110
+              "
+            />
+            <ZoomIn className="w-4 h-4 text-gray-400" />
+          </div>
+          
           {/* Photo count */}
-          <div className="ml-auto flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
             <Images className="w-4 h-4" />
             <span>{filteredPhotos.length} photo{filteredPhotos.length !== 1 ? 's' : ''}</span>
           </div>
@@ -297,7 +346,7 @@ export default function PhotosTab() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+        <div className={`grid gap-3 ${getGridCols()}`}>
           {filteredPhotos.map(photo => (
             <div key={photo.id} className="relative group">
               <PhotoThumbnail
