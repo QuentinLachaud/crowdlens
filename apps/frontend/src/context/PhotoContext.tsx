@@ -66,6 +66,7 @@ interface PhotoContextValue {
   
   // Actions
   setPendingFiles: (files: File[]) => void;
+  uploadFilesToEvent: (files: File[], eventId: string) => Promise<void>;
   createEvent: (params: CreateEventParams) => Event;
   updateEvent: (eventId: string, params: Partial<CreateEventParams>) => void;
   uploadPhotosToEvent: (eventId: string) => Promise<void>;
@@ -156,6 +157,68 @@ export function PhotoProvider({ children }: { children: ReactNode }) {
     }
     setPendingFilesState(validFiles);
     setUploadState('selecting-event');
+  }, []);
+  
+  // Upload files directly to a specific event (skips event selector)
+  const uploadFilesToEvent = useCallback(async (files: File[], eventId: string) => {
+    const validFiles = files.filter(isValidImageFile);
+    if (validFiles.length === 0) {
+      alert('Please select valid image files (JPEG, PNG, HEIC, WebP)');
+      return;
+    }
+    
+    // Set the files and immediately start processing
+    setPendingFilesState(validFiles);
+    setUploadState('processing');
+    setUploadProgress({ processed: 0, total: validFiles.length });
+    
+    try {
+      const newPhotos = await processPhotoFiles(
+        validFiles,
+        eventId,
+        (processed, total) => setUploadProgress({ processed, total })
+      );
+      
+      setPhotos(prev => [...prev, ...newPhotos]);
+      
+      // Auto-infer event location from photos if event doesn't have location
+      setEvents(prev => prev.map(e => {
+        if (e.id !== eventId) return e;
+        if (e.locationLat !== undefined && e.locationLng !== undefined) return e;
+        
+        const photosWithGps = newPhotos.filter(p => p.gpsLat !== null && p.gpsLng !== null);
+        if (photosWithGps.length === 0) return e;
+        
+        const avgLat = photosWithGps.reduce((sum, p) => sum + (p.gpsLat || 0), 0) / photosWithGps.length;
+        const avgLng = photosWithGps.reduce((sum, p) => sum + (p.gpsLng || 0), 0) / photosWithGps.length;
+        
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${avgLat}&lon=${avgLng}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.display_name) {
+              const parts = data.display_name.split(', ');
+              const locationName = parts.slice(0, 2).join(', ');
+              setEvents(prev2 => prev2.map(e2 => 
+                e2.id === eventId ? { ...e2, locationName } : e2
+              ));
+            }
+          })
+          .catch(() => {});
+        
+        return { ...e, locationLat: avgLat, locationLng: avgLng };
+      }));
+      
+      setUploadState('success');
+      
+      setTimeout(() => {
+        setUploadState('idle');
+        setPendingFilesState([]);
+      }, 1500);
+    } catch (error) {
+      console.error('Upload failed:', error);
+      setUploadState('idle');
+      setPendingFilesState([]);
+    }
   }, []);
   
   // Create a new event with full properties
@@ -341,6 +404,7 @@ export function PhotoProvider({ children }: { children: ReactNode }) {
     editingEventId,
     setEditingEventId,
     setPendingFiles,
+    uploadFilesToEvent,
     createEvent,
     updateEvent,
     uploadPhotosToEvent,

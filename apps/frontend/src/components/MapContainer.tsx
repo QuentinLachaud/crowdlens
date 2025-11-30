@@ -149,6 +149,7 @@ export default function MapContainer({ clusters, events, photos, onEventClick }:
             lng={cluster.lng}
             photo={cluster.representative}
             eventName={event?.name || 'Unknown Event'}
+            eventType={event?.eventType}
             photoCount={cluster.photos.length}
             onClick={() => event && onEventClick(event.id)}
           />
@@ -172,6 +173,7 @@ export default function MapContainer({ clusters, events, photos, onEventClick }:
               lng={event.locationLng!}
               photo={coverPhoto}
               eventName={event.name}
+              eventType={event.eventType}
               photoCount={eventPhotos.length}
               onClick={() => onEventClick(event.id)}
             />

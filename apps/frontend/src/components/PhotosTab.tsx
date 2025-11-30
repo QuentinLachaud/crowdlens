@@ -12,15 +12,15 @@
 
 'use client';
 
-import { useState, useMemo, useRef, useEffect } from 'react';
-import { Star, ChevronDown, Search, X, MapPin, Calendar, Images, Filter, ZoomIn, ZoomOut } from 'lucide-react';
+import { useState, useMemo, useRef, useEffect, ChangeEvent } from 'react';
+import { Star, ChevronDown, Search, X, MapPin, Calendar, Images, Filter, ZoomIn, ZoomOut, Upload } from 'lucide-react';
 import { usePhotos } from '@/context/PhotoContext';
 import PhotoThumbnail from './PhotoThumbnail';
 import PhotoModal from './PhotoModal';
 import { Photo } from '@/types';
 
 export default function PhotosTab() {
-  const { photos, events, photoFilters, setPhotoFilters, togglePhotoFavorite, photosTabZoom, setPhotosTabZoom } = usePhotos();
+  const { photos, events, photoFilters, setPhotoFilters, togglePhotoFavorite, photosTabZoom, setPhotosTabZoom, setPendingFiles } = usePhotos();
   
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [showEventDropdown, setShowEventDropdown] = useState(false);
@@ -29,6 +29,16 @@ export default function PhotosTab() {
   
   const eventDropdownRef = useRef<HTMLDivElement>(null);
   const locationDropdownRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Handle file upload
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      setPendingFiles(files);
+    }
+    e.target.value = '';
+  };
   
   // Close dropdowns on outside click
   useEffect(() => {
@@ -327,6 +337,29 @@ export default function PhotosTab() {
           <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
             <Images className="w-4 h-4" />
             <span>{filteredPhotos.length} photo{filteredPhotos.length !== 1 ? 's' : ''}</span>
+          </div>
+          
+          {/* Upload Photos Button */}
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="
+                flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm
+                bg-primary-500 hover:bg-primary-600 text-white
+                transition-all duration-200 shadow-sm hover:shadow-md
+              "
+            >
+              <Upload className="w-4 h-4" />
+              <span>Upload Photos</span>
+            </button>
           </div>
         </div>
       </div>

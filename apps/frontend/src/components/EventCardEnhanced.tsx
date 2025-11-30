@@ -53,7 +53,7 @@ export default function EventCardEnhanced({
     toggleFavorite, 
     setEditingEventId, 
     setShowEditEventModal,
-    setPendingFiles,
+    uploadFilesToEvent,
   } = usePhotos();
   
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
@@ -111,11 +111,11 @@ export default function EventCardEnhanced({
     fileInputRef.current?.click();
   };
   
-  // Handle file selection
+  // Handle file selection - directly upload to this event
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length > 0) {
-      setPendingFiles(files);
+      uploadFilesToEvent(files, event.id);
     }
     // Reset input
     if (fileInputRef.current) {
