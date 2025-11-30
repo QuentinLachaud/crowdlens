@@ -1,9 +1,10 @@
 /**
- * MapView - World map showing photos and user location.
+ * MapView - World map showing events and photos with satellite imagery.
  * 
  * Features:
- * - Shows map centered on user's location when no photos
- * - Photo location markers with clustering
+ * - Satellite map imagery
+ * - Shows map centered on user's location when no content
+ * - Clickable event thumbnails at locations
  * - Event filtering
  * - Responsive height
  */
@@ -34,7 +35,7 @@ const MapContainer = dynamic(
 );
 
 export default function MapView() {
-  const { photos, events, mapFilters } = usePhotos();
+  const { photos, events, mapFilters, setSelectedEventId } = usePhotos();
   
   // Filter photos by selected events (if any filters active)
   const filteredPhotos = useMemo(() => {
@@ -54,6 +55,18 @@ export default function MapView() {
   
   const hasPhotosWithLocation = photos.some(p => p.gpsLat !== null && p.gpsLng !== null);
   
+  // Count events with location
+  const eventsWithLocation = useMemo(() => {
+    return events.filter(e => e.locationLat !== undefined && e.locationLng !== undefined);
+  }, [events]);
+  
+  const hasContent = hasPhotosWithLocation || eventsWithLocation.length > 0;
+  
+  // Handle event click to navigate to event detail
+  const handleEventClick = (eventId: string) => {
+    setSelectedEventId(eventId);
+  };
+  
   return (
     <div className="space-y-4">
       {/* Header with stats and filters */}
@@ -61,25 +74,29 @@ export default function MapView() {
         <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
           <ImageIcon className="w-4 h-4" />
           <span>
-            {filteredPhotos.length > 0 
-              ? `${filteredPhotos.length} photo${filteredPhotos.length !== 1 ? 's' : ''} with location`
+            {eventsWithLocation.length > 0 || filteredPhotos.length > 0
+              ? `${eventsWithLocation.length} event${eventsWithLocation.length !== 1 ? 's' : ''} • ${filteredPhotos.length} photo${filteredPhotos.length !== 1 ? 's' : ''} with location`
               : 'Explore the map'
             }
-            {clusters.length > 0 && ` in ${clusters.length} location${clusters.length !== 1 ? 's' : ''}`}
           </span>
         </div>
-        {hasPhotosWithLocation && <MapFilters />}
+        {hasContent && <MapFilters />}
       </div>
       
       {/* Map container - always shown, centered on user location */}
       <div className="h-[500px] md:h-[600px] rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm">
-        <MapContainer clusters={clusters} events={events} />
+        <MapContainer 
+          clusters={clusters} 
+          events={events} 
+          photos={photos}
+          onEventClick={handleEventClick}
+        />
       </div>
       
-      {/* Helpful hint when no photos */}
-      {!hasPhotosWithLocation && (
+      {/* Helpful hint when no content */}
+      {!hasContent && (
         <p className="text-center text-sm text-gray-400 dark:text-gray-500">
-          Upload photos with GPS data to see them on the map
+          Upload photos with GPS data or create events with locations to see them on the map
         </p>
       )}
     </div>

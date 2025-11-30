@@ -1,13 +1,13 @@
 /**
- * TabSwitcher - Navigation between Photos and Map views.
+ * TabSwitcher - Navigation between Photos, Map, and Events views.
  * 
  * Renders a clean tab bar with smooth transitions between active states.
- * Supports both "photos" and "map" tabs.
+ * Supports "photos", "map", and "events" tabs.
  */
 
 'use client';
 
-import { Images, Map } from 'lucide-react';
+import { Images, Map, Calendar } from 'lucide-react';
 import { ActiveTab } from '@/types';
 
 interface TabSwitcherProps {
@@ -19,6 +19,7 @@ export default function TabSwitcher({ activeTab, onTabChange }: TabSwitcherProps
   const tabs: { id: ActiveTab; label: string; icon: typeof Images }[] = [
     { id: 'photos', label: 'Photos', icon: Images },
     { id: 'map', label: 'Map', icon: Map },
+    { id: 'events', label: 'Events', icon: Calendar },
   ];
   
   return (

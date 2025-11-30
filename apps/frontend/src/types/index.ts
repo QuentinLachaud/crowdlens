@@ -123,6 +123,8 @@ export interface Event {
   endDate: Date | null;
   /** When the event was created in the app */
   createdAt: Date;
+  /** Whether the event is marked as favorite */
+  isFavorite: boolean;
 }
 
 /** Upload state machine states */
@@ -163,8 +165,16 @@ export interface MapFilters {
   selectedEventIds: string[];
 }
 
+/** Events tab filter state */
+export interface EventFilters {
+  showFavoritesOnly: boolean;
+  sortBy: 'startDate' | 'createdAt' | 'name';
+  sortOrder: 'asc' | 'desc';
+  selectedLocations: string[];
+}
+
 /** Main navigation tab */
-export type ActiveTab = 'photos' | 'map';
+export type ActiveTab = 'photos' | 'map' | 'events';
 
 /**
  * User's current location.

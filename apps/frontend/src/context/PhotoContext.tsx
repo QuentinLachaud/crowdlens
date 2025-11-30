@@ -13,7 +13,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
-import { Photo, Event, PhotoFilters, MapFilters, UploadState, EventType } from '@/types';
+import { Photo, Event, PhotoFilters, MapFilters, EventFilters, UploadState, EventType } from '@/types';
 import { generateId } from '@/utils/helpers';
 import { processPhotoFiles } from '@/utils/exif';
 import { isValidImageFile } from '@/utils/helpers';
@@ -45,24 +45,36 @@ interface PhotoContextValue {
   // Filters
   photoFilters: PhotoFilters;
   mapFilters: MapFilters;
+  eventFilters: EventFilters;
   
   // Selected states
   selectedEventId: string | null;
   
+  // View settings
+  eventDetailZoom: number; // 2-8 images per row
+  setEventDetailZoom: (zoom: number) => void;
+  
   // Modal state
   showCreateEventModal: boolean;
   setShowCreateEventModal: (show: boolean) => void;
+  showEditEventModal: boolean;
+  setShowEditEventModal: (show: boolean) => void;
+  editingEventId: string | null;
+  setEditingEventId: (id: string | null) => void;
   
   // Actions
   setPendingFiles: (files: File[]) => void;
   createEvent: (params: CreateEventParams) => Event;
+  updateEvent: (eventId: string, params: Partial<CreateEventParams>) => void;
   uploadPhotosToEvent: (eventId: string) => Promise<void>;
   cancelUpload: () => void;
   setPhotoFilters: (filters: Partial<PhotoFilters>) => void;
   setMapFilters: (filters: Partial<MapFilters>) => void;
+  setEventFilters: (filters: Partial<EventFilters>) => void;
   setSelectedEventId: (id: string | null) => void;
   getPhotosForEvent: (eventId: string) => Photo[];
   getPhotosWithLocation: () => Photo[];
+  toggleFavorite: (eventId: string) => void;
   deletePhoto: (photoId: string) => void;
   deleteEvent: (eventId: string) => void;
 }
@@ -89,10 +101,21 @@ export function PhotoProvider({ children }: { children: ReactNode }) {
   const [mapFilters, setMapFiltersState] = useState<MapFilters>({
     selectedEventIds: [],
   });
+  const [eventFilters, setEventFiltersState] = useState<EventFilters>({
+    showFavoritesOnly: false,
+    sortBy: 'startDate',
+    sortOrder: 'desc',
+    selectedLocations: [],
+  });
+  
+  // View settings
+  const [eventDetailZoom, setEventDetailZoom] = useState(4); // Default 4 images per row
   
   // Selection and modal state
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [showCreateEventModal, setShowCreateEventModal] = useState(false);
+  const [showEditEventModal, setShowEditEventModal] = useState(false);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
   
   // Load data from localStorage on mount
   useEffect(() => {
@@ -142,9 +165,36 @@ export function PhotoProvider({ children }: { children: ReactNode }) {
       startDate: params.startDate,
       endDate: params.endDate,
       createdAt: new Date(),
+      isFavorite: false,
     };
     setEvents(prev => [...prev, event]);
     return event;
+  }, []);
+  
+  // Update an existing event
+  const updateEvent = useCallback((eventId: string, params: Partial<CreateEventParams>) => {
+    setEvents(prev => prev.map(e => {
+      if (e.id !== eventId) return e;
+      return {
+        ...e,
+        ...(params.name !== undefined && { name: params.name.trim() || e.name }),
+        ...(params.description !== undefined && { description: params.description }),
+        ...(params.eventType !== undefined && { eventType: params.eventType }),
+        ...(params.locationName !== undefined && { locationName: params.locationName }),
+        ...(params.locationLat !== undefined && { locationLat: params.locationLat }),
+        ...(params.locationLng !== undefined && { locationLng: params.locationLng }),
+        ...(params.isMultiDay !== undefined && { isMultiDay: params.isMultiDay }),
+        ...(params.startDate !== undefined && { startDate: params.startDate }),
+        ...(params.endDate !== undefined && { endDate: params.endDate }),
+      };
+    }));
+  }, []);
+  
+  // Toggle event favorite status
+  const toggleFavorite = useCallback((eventId: string) => {
+    setEvents(prev => prev.map(e => 
+      e.id === eventId ? { ...e, isFavorite: !e.isFavorite } : e
+    ));
   }, []);
   
   // Upload photos to an event
@@ -197,6 +247,11 @@ export function PhotoProvider({ children }: { children: ReactNode }) {
     setMapFiltersState(prev => ({ ...prev, ...filters }));
   }, []);
   
+  // Update event filters
+  const setEventFilters = useCallback((filters: Partial<EventFilters>) => {
+    setEventFiltersState(prev => ({ ...prev, ...filters }));
+  }, []);
+  
   // Get photos for a specific event
   const getPhotosForEvent = useCallback((eventId: string) => {
     return photos.filter(p => p.eventId === eventId);
@@ -226,18 +281,28 @@ export function PhotoProvider({ children }: { children: ReactNode }) {
     pendingFiles,
     photoFilters,
     mapFilters,
+    eventFilters,
     selectedEventId,
+    eventDetailZoom,
+    setEventDetailZoom,
     showCreateEventModal,
     setShowCreateEventModal,
+    showEditEventModal,
+    setShowEditEventModal,
+    editingEventId,
+    setEditingEventId,
     setPendingFiles,
     createEvent,
+    updateEvent,
     uploadPhotosToEvent,
     cancelUpload,
     setPhotoFilters,
     setMapFilters,
+    setEventFilters,
     setSelectedEventId,
     getPhotosForEvent,
     getPhotosWithLocation,
+    toggleFavorite,
     deletePhoto,
     deleteEvent,
   };

@@ -4,7 +4,7 @@
  * Structure:
  * - Fixed header at top
  * - Collapsible sidebar on left
- * - Main content area
+ * - Main content area that shifts with sidebar
  * - Global modals (event selector, create event)
  */
 
@@ -17,8 +17,10 @@ import TabSwitcher from './TabSwitcher';
 import Sidebar from './Sidebar';
 import PhotosTab from './PhotosTab';
 import MapView from './MapView';
+import EventsTab from './EventsTab';
 import EventSelector from './EventSelector';
 import CreateEventModal from './CreateEventModal';
+import EditEventModal from './EditEventModal';
 
 export default function AppShell() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('photos');
@@ -27,13 +29,22 @@ export default function AppShell() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Header />
-      <TabSwitcher activeTab={activeTab} onTabChange={setActiveTab} />
       
       {/* Sidebar */}
       <Sidebar 
         isCollapsed={sidebarCollapsed} 
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} 
       />
+      
+      {/* Tab Switcher - also shifts with sidebar */}
+      <div 
+        className={`
+          transition-all duration-300 ease-out
+          ${sidebarCollapsed ? 'ml-16' : 'ml-72'}
+        `}
+      >
+        <TabSwitcher activeTab={activeTab} onTabChange={setActiveTab} />
+      </div>
       
       {/* Main content with sidebar offset */}
       <main 
@@ -43,13 +54,16 @@ export default function AppShell() {
         `}
       >
         <div className="max-w-6xl mx-auto animate-fade-in">
-          {activeTab === 'photos' ? <PhotosTab /> : <MapView />}
+          {activeTab === 'photos' && <PhotosTab />}
+          {activeTab === 'map' && <MapView />}
+          {activeTab === 'events' && <EventsTab />}
         </div>
       </main>
       
       {/* Global modals */}
       <EventSelector />
       <CreateEventModal />
+      <EditEventModal />
     </div>
   );
 }

@@ -48,6 +48,7 @@ interface StoredEvent {
   startDate: string | null;
   endDate: string | null;
   createdAt: string;
+  isFavorite: boolean;
 }
 
 /**
@@ -102,6 +103,7 @@ function serializeEvent(event: Event): StoredEvent {
     startDate: event.startDate?.toISOString() ?? null,
     endDate: event.endDate?.toISOString() ?? null,
     createdAt: event.createdAt.toISOString(),
+    isFavorite: event.isFavorite,
   };
 }
 
@@ -121,6 +123,7 @@ function deserializeEvent(stored: StoredEvent): Event {
     startDate: stored.startDate ? new Date(stored.startDate) : null,
     endDate: stored.endDate ? new Date(stored.endDate) : null,
     createdAt: new Date(stored.createdAt),
+    isFavorite: stored.isFavorite ?? false,
   };
 }
 
