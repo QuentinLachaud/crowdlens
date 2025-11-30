@@ -2,7 +2,7 @@
 
 > **Discover your event photos.** A modern platform for event photo sharing with intelligent face and bib number recognition.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue)](https://www.typescriptlang.org/)
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-orange)](https://workers.cloudflare.com/)
 
@@ -875,7 +875,21 @@ Recommended options: **Neon** (serverless), **Supabase** (batteries-included).
 
 ## License
 
-This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
+**© 2025 CrowdLens. All Rights Reserved.**
+
+This software is proprietary and confidential. No license is granted for any use, copying, modification, distribution, or redistribution of this code.
+
+**You may NOT:**
+
+- Use this software for any purpose
+- Copy, modify, or distribute this software
+- Create derivative works based on this software
+- Sublicense or sell copies of this software
+- Use this software in commercial or non-commercial projects
+
+Unauthorized use, reproduction, or distribution of this software is strictly prohibited and may result in legal action.
+
+For licensing inquiries, please contact the project maintainers.
 
 ---
 
