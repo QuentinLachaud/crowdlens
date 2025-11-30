@@ -1,19 +1,21 @@
 /**
- * Header - App header with branding and theme toggle.
+ * Header - App header with branding, Create Event button, and theme toggle.
  * 
- * Displays the app name, tagline, and a button to switch between
- * light and dark modes.
+ * Displays the app name, tagline, Create Event button (top-right),
+ * and a button to switch between light and dark modes.
  */
 
 'use client';
 
-import { Camera, Moon, Sun, HelpCircle } from 'lucide-react';
+import { Camera, Moon, Sun, HelpCircle, Plus } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
+import { usePhotos } from '@/context/PhotoContext';
 import { useState } from 'react';
 import HelpPanel from './HelpPanel';
 
 export default function Header() {
   const { isDark, toggleTheme } = useTheme();
+  const { setShowCreateEventModal } = usePhotos();
   const [showHelp, setShowHelp] = useState(false);
   
   return (
@@ -38,6 +40,23 @@ export default function Header() {
             
             {/* Actions */}
             <div className="flex items-center gap-2">
+              {/* Create Event Button */}
+              <button
+                onClick={() => setShowCreateEventModal(true)}
+                className="
+                  flex items-center gap-2 px-4 py-2 rounded-xl
+                  bg-gradient-to-r from-primary-500 to-primary-600
+                  hover:from-primary-600 hover:to-primary-700
+                  text-white font-medium text-sm
+                  shadow-lg shadow-primary-500/25 hover:shadow-xl hover:shadow-primary-500/35
+                  transition-all duration-300 ease-out
+                  hover:-translate-y-0.5 active:translate-y-0
+                "
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Create Event</span>
+              </button>
+              
               <button
                 onClick={() => setShowHelp(true)}
                 className="p-2 rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"

@@ -2,14 +2,17 @@
  * PhotoModal - Full-screen photo viewer with metadata.
  * 
  * Displays a larger version of the photo with all available metadata.
+ * Click anywhere outside the photo to close.
  */
 
 'use client';
 
-import { X, Calendar, Clock, MapPin, FileImage, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { X, Calendar, Clock, MapPin, FileImage, Trash2, Star } from 'lucide-react';
 import { Photo } from '@/types';
 import { formatDate } from '@/utils/helpers';
 import { usePhotos } from '@/context/PhotoContext';
+import ConfirmDeleteModal from './ConfirmDeleteModal';
 
 interface PhotoModalProps {
   photo: Photo;
@@ -17,29 +20,43 @@ interface PhotoModalProps {
 }
 
 export default function PhotoModal({ photo, onClose }: PhotoModalProps) {
-  const { deletePhoto, events } = usePhotos();
+  const { deletePhoto, events, togglePhotoFavorite } = usePhotos();
   const event = events.find(e => e.id === photo.eventId);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   
   const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this photo?')) {
-      deletePhoto(photo.id);
-      onClose();
-    }
+    setShowDeleteModal(true);
+  };
+  
+  const confirmDelete = () => {
+    deletePhoto(photo.id);
+    onClose();
+  };
+  
+  const handleToggleFavorite = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    togglePhotoFavorite(photo.id);
   };
   
   const hasLocation = photo.gpsLat !== null && photo.gpsLng !== null;
   
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop - clicking closes the modal */}
       <div 
-        className="fixed inset-0 bg-black/90 z-50 animate-fade-in"
+        className="fixed inset-0 bg-black/95 z-50 animate-fade-in cursor-pointer"
         onClick={onClose}
       />
       
       {/* Modal content */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="relative max-w-5xl w-full max-h-[90vh] flex flex-col md:flex-row bg-white dark:bg-gray-900 rounded-2xl overflow-hidden animate-scale-in">
+      <div 
+        className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4"
+        onClick={onClose}
+      >
+        <div 
+          className="relative w-full max-w-7xl max-h-[95vh] flex flex-col lg:flex-row bg-white dark:bg-gray-900 rounded-2xl overflow-hidden animate-scale-in"
+          onClick={e => e.stopPropagation()}
+        >
           {/* Close button */}
           <button
             onClick={onClose}
@@ -48,17 +65,31 @@ export default function PhotoModal({ photo, onClose }: PhotoModalProps) {
             <X className="w-5 h-5" />
           </button>
           
-          {/* Image */}
-          <div className="flex-1 bg-black flex items-center justify-center min-h-[300px] md:min-h-[500px]">
+          {/* Favorite button */}
+          <button
+            onClick={handleToggleFavorite}
+            className={`
+              absolute top-4 left-4 z-10 p-2.5 rounded-full transition-all duration-300
+              ${photo.isFavorite 
+                ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/50 scale-110' 
+                : 'bg-black/50 hover:bg-black/70 text-white hover:text-pink-400'
+              }
+            `}
+          >
+            <Star className={`w-5 h-5 transition-all ${photo.isFavorite ? 'fill-current' : ''}`} />
+          </button>
+          
+          {/* Image - much larger */}
+          <div className="flex-1 bg-black flex items-center justify-center min-h-[400px] lg:min-h-[600px]">
             <img
               src={photo.thumbnailUrl}
               alt={photo.fileName}
-              className="max-w-full max-h-[60vh] md:max-h-[80vh] object-contain"
+              className="max-w-full max-h-[70vh] lg:max-h-[90vh] object-contain"
             />
           </div>
           
           {/* Metadata sidebar */}
-          <div className="w-full md:w-80 p-6 bg-white dark:bg-gray-900 border-t md:border-t-0 md:border-l border-gray-200 dark:border-gray-800">
+          <div className="w-full lg:w-80 p-6 bg-white dark:bg-gray-900 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-gray-800">
             <h3 className="font-semibold text-gray-900 dark:text-white text-lg mb-4 line-clamp-2">
               {photo.fileName}
             </h3>
@@ -136,6 +167,15 @@ export default function PhotoModal({ photo, onClose }: PhotoModalProps) {
           </div>
         </div>
       </div>
+      
+      {/* Delete Confirmation Modal */}
+      <ConfirmDeleteModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={confirmDelete}
+        itemType="photo"
+        itemName={photo.fileName}
+      />
     </>
   );
 }

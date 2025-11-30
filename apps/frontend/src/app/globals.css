@@ -21,7 +21,9 @@ body {
   @apply bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white;
 }
 
-/* Leaflet map styles */
+/* ========================================
+   Leaflet Map Styles
+   ======================================== */
 .leaflet-container {
   font-family: inherit;
 }
@@ -44,56 +46,88 @@ body {
   border: none !important;
 }
 
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
+/* Event map marker */
+.event-map-marker {
+  background: transparent !important;
+  border: none !important;
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
+/* User location marker */
+.user-location-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.user-marker-wrapper {
+  position: relative;
+  width: 24px;
+  height: 24px;
+}
+
+.user-marker-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  background: #3b82f6;
+  border: 3px solid white;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+}
+
+.user-marker-pulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  background: rgba(59, 130, 246, 0.3);
+  border-radius: 50%;
+  animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Location pin styles */
+.location-pin {
+  background: transparent !important;
+  border: none !important;
+}
+
+.pin-wrapper {
+  position: relative;
+}
+
+.pin-shadow {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
   height: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 50%;
+  filter: blur(2px);
 }
 
-::-webkit-scrollbar-track {
-  @apply bg-gray-100 dark:bg-gray-800;
-}
-
-::-webkit-scrollbar-thumb {
-  @apply bg-gray-300 dark:bg-gray-600 rounded-full;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-400 dark:bg-gray-500;
-}
-
-/* Focus styles */
-:focus-visible {
-  @apply outline-none ring-2 ring-primary-500 ring-offset-2 dark:ring-offset-gray-900;
-}
-
-/* Animation utilities */
-@layer utilities {
-  .animate-fade-in {
-    animation: fadeIn 0.2s ease-out;
+/* ========================================
+   Custom Animations
+   ======================================== */
+@keyframes pulse-ring {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 1;
   }
-  
-  .animate-slide-up {
-    animation: slideUp 0.3s ease-out;
-  }
-  
-  .animate-scale-in {
-    animation: scaleIn 0.2s ease-out;
+  100% {
+    transform: translate(-50%, -50%) scale(1.5);
+    opacity: 0;
   }
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes slideUp {
@@ -118,7 +152,156 @@ html {
   }
 }
 
-/* Line clamp utility */
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  70% {
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes bounceSlow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(229, 99, 79, 0.4), 0 0 40px rgba(229, 99, 79, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(229, 99, 79, 0.6), 0 0 60px rgba(229, 99, 79, 0.3);
+  }
+}
+
+@keyframes starBurst {
+  0% {
+    transform: scale(0.5) rotate(-30deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.3) rotate(15deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+@keyframes goldenPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(251, 191, 36, 0);
+  }
+}
+
+/* Animation utility classes */
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.2s ease-out;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+  
+  .animate-scale-in {
+    animation: scaleIn 0.2s ease-out;
+  }
+  
+  .animate-pop-in {
+    animation: popIn 0.3s ease-out;
+  }
+  
+  .animate-bounce-slow {
+    animation: bounceSlow 2s ease-in-out infinite;
+  }
+  
+  .animate-star-burst {
+    animation: starBurst 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+  
+  .animate-golden-pulse {
+    animation: goldenPulse 1.5s ease-in-out infinite;
+  }
+}
+
+/* Glowing button effect */
+.glow-button {
+  animation: glow 2s ease-in-out infinite;
+}
+
+/* Shimmer effect overlay */
+.shimmer-effect {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  animation: shimmer 2s infinite;
+}
+
+/* ========================================
+   Scrollbar Styles
+   ======================================== */
+html {
+  scroll-behavior: smooth;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100 dark:bg-gray-800;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400 dark:bg-gray-500;
+}
+
+/* ========================================
+   Focus & Accessibility
+   ======================================== */
+:focus-visible {
+  @apply outline-none ring-2 ring-primary-500 ring-offset-2 dark:ring-offset-gray-900;
+}
+
+/* ========================================
+   Text Utilities
+   ======================================== */
 .line-clamp-1 {
   display: -webkit-box;
   -webkit-line-clamp: 1;

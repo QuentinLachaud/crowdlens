@@ -1,21 +1,36 @@
 /**
  * PhotoContext - Global state management for photos and events.
  * 
- * This context provides:
- * - Photos and events storage (in-memory for MVP)
- * - Methods to add/remove photos and events
+ * Features:
+ * - Photos and events storage with localStorage persistence
+ * - CRUD operations for photos and events
  * - Filter state for both photos and map views
+ * - Upload workflow management
  * 
- * Designed to be easily replaceable with API calls in the future.
+ * Persistence: Data auto-saves to localStorage on every mutation.
  */
 
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { Photo, Event, PhotoFilters, MapFilters, UploadState } from '@/types';
+import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import { Photo, Event, PhotoFilters, MapFilters, EventFilters, UploadState, EventType } from '@/types';
 import { generateId } from '@/utils/helpers';
 import { processPhotoFiles } from '@/utils/exif';
 import { isValidImageFile } from '@/utils/helpers';
+import { savePhotos, loadPhotos, saveEvents, loadEvents } from '@/services/storage';
+
+/** Event creation parameters */
+export interface CreateEventParams {
+  name: string;
+  description?: string;
+  eventType: EventType;
+  locationName?: string;
+  locationLat?: number;
+  locationLng?: number;
+  isMultiDay: boolean;
+  startDate: Date | null;
+  endDate: Date | null;
+}
 
 interface PhotoContextValue {
   // Data
@@ -30,20 +45,40 @@ interface PhotoContextValue {
   // Filters
   photoFilters: PhotoFilters;
   mapFilters: MapFilters;
+  eventFilters: EventFilters;
   
   // Selected states
   selectedEventId: string | null;
   
+  // View settings
+  eventDetailZoom: number; // 2-8 images per row
+  setEventDetailZoom: (zoom: number) => void;
+  photosTabZoom: number; // 2-10 images per row for Photos tab
+  setPhotosTabZoom: (zoom: number) => void;
+  
+  // Modal state
+  showCreateEventModal: boolean;
+  setShowCreateEventModal: (show: boolean) => void;
+  showEditEventModal: boolean;
+  setShowEditEventModal: (show: boolean) => void;
+  editingEventId: string | null;
+  setEditingEventId: (id: string | null) => void;
+  
   // Actions
   setPendingFiles: (files: File[]) => void;
-  createEvent: (name: string) => Event;
+  uploadFilesToEvent: (files: File[], eventId: string) => Promise<void>;
+  createEvent: (params: CreateEventParams) => Event;
+  updateEvent: (eventId: string, params: Partial<CreateEventParams>) => void;
   uploadPhotosToEvent: (eventId: string) => Promise<void>;
   cancelUpload: () => void;
   setPhotoFilters: (filters: Partial<PhotoFilters>) => void;
   setMapFilters: (filters: Partial<MapFilters>) => void;
+  setEventFilters: (filters: Partial<EventFilters>) => void;
   setSelectedEventId: (id: string | null) => void;
   getPhotosForEvent: (eventId: string) => Photo[];
   getPhotosWithLocation: () => Photo[];
+  toggleFavorite: (eventId: string) => void;
+  togglePhotoFavorite: (photoId: string) => void;
   deletePhoto: (photoId: string) => void;
   deleteEvent: (eventId: string) => void;
 }
@@ -51,9 +86,10 @@ interface PhotoContextValue {
 const PhotoContext = createContext<PhotoContextValue | null>(null);
 
 export function PhotoProvider({ children }: { children: ReactNode }) {
-  // Core data state
+  // Core data state - initialized from localStorage
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
+  const [isHydrated, setIsHydrated] = useState(false);
   
   // Upload state
   const [uploadState, setUploadState] = useState<UploadState>('idle');
@@ -65,13 +101,52 @@ export function PhotoProvider({ children }: { children: ReactNode }) {
     searchQuery: '',
     selectedEventId: null,
     selectedYear: null,
+    showFavoritesOnly: false,
+    selectedCountry: null,
+    selectedCity: null,
   });
   const [mapFilters, setMapFiltersState] = useState<MapFilters>({
     selectedEventIds: [],
   });
+  const [eventFilters, setEventFiltersState] = useState<EventFilters>({
+    showFavoritesOnly: false,
+    sortBy: 'startDate',
+    sortOrder: 'desc',
+    selectedLocations: [],
+  });
   
-  // Selection state
+  // View settings
+  const [eventDetailZoom, setEventDetailZoom] = useState(4); // Default 4 images per row
+  const [photosTabZoom, setPhotosTabZoom] = useState(6); // Default 6 images per row for Photos tab
+  
+  // Selection and modal state
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [showCreateEventModal, setShowCreateEventModal] = useState(false);
+  const [showEditEventModal, setShowEditEventModal] = useState(false);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  
+  // Load data from localStorage on mount
+  useEffect(() => {
+    const storedPhotos = loadPhotos();
+    const storedEvents = loadEvents();
+    setPhotos(storedPhotos);
+    setEvents(storedEvents);
+    setIsHydrated(true);
+  }, []);
+  
+  // Persist photos to localStorage when they change
+  useEffect(() => {
+    if (isHydrated) {
+      savePhotos(photos);
+    }
+  }, [photos, isHydrated]);
+  
+  // Persist events to localStorage when they change
+  useEffect(() => {
+    if (isHydrated) {
+      saveEvents(events);
+    }
+  }, [events, isHydrated]);
   
   // Set pending files and show event selector
   const setPendingFiles = useCallback((files: File[]) => {
@@ -84,15 +159,112 @@ export function PhotoProvider({ children }: { children: ReactNode }) {
     setUploadState('selecting-event');
   }, []);
   
-  // Create a new event
-  const createEvent = useCallback((name: string): Event => {
+  // Upload files directly to a specific event (skips event selector)
+  const uploadFilesToEvent = useCallback(async (files: File[], eventId: string) => {
+    const validFiles = files.filter(isValidImageFile);
+    if (validFiles.length === 0) {
+      alert('Please select valid image files (JPEG, PNG, HEIC, WebP)');
+      return;
+    }
+    
+    // Set the files and immediately start processing
+    setPendingFilesState(validFiles);
+    setUploadState('processing');
+    setUploadProgress({ processed: 0, total: validFiles.length });
+    
+    try {
+      const newPhotos = await processPhotoFiles(
+        validFiles,
+        eventId,
+        (processed, total) => setUploadProgress({ processed, total })
+      );
+      
+      setPhotos(prev => [...prev, ...newPhotos]);
+      
+      // Auto-infer event location from photos if event doesn't have location
+      setEvents(prev => prev.map(e => {
+        if (e.id !== eventId) return e;
+        if (e.locationLat !== undefined && e.locationLng !== undefined) return e;
+        
+        const photosWithGps = newPhotos.filter(p => p.gpsLat !== null && p.gpsLng !== null);
+        if (photosWithGps.length === 0) return e;
+        
+        const avgLat = photosWithGps.reduce((sum, p) => sum + (p.gpsLat || 0), 0) / photosWithGps.length;
+        const avgLng = photosWithGps.reduce((sum, p) => sum + (p.gpsLng || 0), 0) / photosWithGps.length;
+        
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${avgLat}&lon=${avgLng}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.display_name) {
+              const parts = data.display_name.split(', ');
+              const locationName = parts.slice(0, 2).join(', ');
+              setEvents(prev2 => prev2.map(e2 => 
+                e2.id === eventId ? { ...e2, locationName } : e2
+              ));
+            }
+          })
+          .catch(() => {});
+        
+        return { ...e, locationLat: avgLat, locationLng: avgLng };
+      }));
+      
+      setUploadState('success');
+      
+      setTimeout(() => {
+        setUploadState('idle');
+        setPendingFilesState([]);
+      }, 1500);
+    } catch (error) {
+      console.error('Upload failed:', error);
+      setUploadState('idle');
+      setPendingFilesState([]);
+    }
+  }, []);
+  
+  // Create a new event with full properties
+  const createEvent = useCallback((params: CreateEventParams): Event => {
     const event: Event = {
       id: generateId(),
-      name: name.trim() || 'Untitled Event',
+      name: params.name.trim() || 'Untitled Event',
+      description: params.description,
+      eventType: params.eventType,
+      locationName: params.locationName,
+      locationLat: params.locationLat,
+      locationLng: params.locationLng,
+      isMultiDay: params.isMultiDay,
+      startDate: params.startDate,
+      endDate: params.endDate,
       createdAt: new Date(),
+      isFavorite: false,
     };
     setEvents(prev => [...prev, event]);
     return event;
+  }, []);
+  
+  // Update an existing event
+  const updateEvent = useCallback((eventId: string, params: Partial<CreateEventParams>) => {
+    setEvents(prev => prev.map(e => {
+      if (e.id !== eventId) return e;
+      return {
+        ...e,
+        ...(params.name !== undefined && { name: params.name.trim() || e.name }),
+        ...(params.description !== undefined && { description: params.description }),
+        ...(params.eventType !== undefined && { eventType: params.eventType }),
+        ...(params.locationName !== undefined && { locationName: params.locationName }),
+        ...(params.locationLat !== undefined && { locationLat: params.locationLat }),
+        ...(params.locationLng !== undefined && { locationLng: params.locationLng }),
+        ...(params.isMultiDay !== undefined && { isMultiDay: params.isMultiDay }),
+        ...(params.startDate !== undefined && { startDate: params.startDate }),
+        ...(params.endDate !== undefined && { endDate: params.endDate }),
+      };
+    }));
+  }, []);
+  
+  // Toggle event favorite status
+  const toggleFavorite = useCallback((eventId: string) => {
+    setEvents(prev => prev.map(e => 
+      e.id === eventId ? { ...e, isFavorite: !e.isFavorite } : e
+    ));
   }, []);
   
   // Upload photos to an event
@@ -110,6 +282,39 @@ export function PhotoProvider({ children }: { children: ReactNode }) {
       );
       
       setPhotos(prev => [...prev, ...newPhotos]);
+      
+      // Auto-infer event location from photos if event doesn't have location
+      setEvents(prev => prev.map(e => {
+        if (e.id !== eventId) return e;
+        // Skip if event already has location
+        if (e.locationLat !== undefined && e.locationLng !== undefined) return e;
+        
+        // Find photos with GPS coordinates
+        const photosWithGps = newPhotos.filter(p => p.gpsLat !== null && p.gpsLng !== null);
+        if (photosWithGps.length === 0) return e;
+        
+        // Calculate the most common location (centroid of all GPS points)
+        const avgLat = photosWithGps.reduce((sum, p) => sum + (p.gpsLat || 0), 0) / photosWithGps.length;
+        const avgLng = photosWithGps.reduce((sum, p) => sum + (p.gpsLng || 0), 0) / photosWithGps.length;
+        
+        // Reverse geocode to get location name (fire-and-forget)
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${avgLat}&lon=${avgLng}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.display_name) {
+              const parts = data.display_name.split(', ');
+              const locationName = parts.slice(0, 2).join(', ');
+              // Update event with location name
+              setEvents(prev2 => prev2.map(e2 => 
+                e2.id === eventId ? { ...e2, locationName } : e2
+              ));
+            }
+          })
+          .catch(() => {/* Ignore reverse geocode errors */});
+        
+        return { ...e, locationLat: avgLat, locationLng: avgLng };
+      }));
+      
       setUploadState('success');
       
       // Reset after showing success briefly
@@ -145,6 +350,11 @@ export function PhotoProvider({ children }: { children: ReactNode }) {
     setMapFiltersState(prev => ({ ...prev, ...filters }));
   }, []);
   
+  // Update event filters
+  const setEventFilters = useCallback((filters: Partial<EventFilters>) => {
+    setEventFiltersState(prev => ({ ...prev, ...filters }));
+  }, []);
+  
   // Get photos for a specific event
   const getPhotosForEvent = useCallback((eventId: string) => {
     return photos.filter(p => p.eventId === eventId);
@@ -158,6 +368,13 @@ export function PhotoProvider({ children }: { children: ReactNode }) {
   // Delete a photo
   const deletePhoto = useCallback((photoId: string) => {
     setPhotos(prev => prev.filter(p => p.id !== photoId));
+  }, []);
+  
+  // Toggle photo favorite status
+  const togglePhotoFavorite = useCallback((photoId: string) => {
+    setPhotos(prev => prev.map(p => 
+      p.id === photoId ? { ...p, isFavorite: !p.isFavorite } : p
+    ));
   }, []);
   
   // Delete an event and its photos
@@ -174,16 +391,32 @@ export function PhotoProvider({ children }: { children: ReactNode }) {
     pendingFiles,
     photoFilters,
     mapFilters,
+    eventFilters,
     selectedEventId,
+    eventDetailZoom,
+    setEventDetailZoom,
+    photosTabZoom,
+    setPhotosTabZoom,
+    showCreateEventModal,
+    setShowCreateEventModal,
+    showEditEventModal,
+    setShowEditEventModal,
+    editingEventId,
+    setEditingEventId,
     setPendingFiles,
+    uploadFilesToEvent,
     createEvent,
+    updateEvent,
     uploadPhotosToEvent,
     cancelUpload,
     setPhotoFilters,
     setMapFilters,
+    setEventFilters,
     setSelectedEventId,
     getPhotosForEvent,
     getPhotosWithLocation,
+    toggleFavorite,
+    togglePhotoFavorite,
     deletePhoto,
     deleteEvent,
   };

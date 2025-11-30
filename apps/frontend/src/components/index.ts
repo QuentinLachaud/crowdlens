@@ -19,3 +19,4 @@ export { default as PhotoFilters } from './PhotoFilters';
 export { default as MapView } from './MapView';
 export { default as MapFilters } from './MapFilters';
 export { default as PhotosTab } from './PhotosTab';
+export { default as ConfirmDeleteModal } from './ConfirmDeleteModal';
